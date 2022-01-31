@@ -7,5 +7,5 @@
   "I don't do a whole lot ... yet."
   [& args]
   (if (= 1 (count args))
-    (process-file (first args))
+    (println (process-file (first args)))
     (println "Usage: lein run: <filepath>")))

@@ -19,12 +19,12 @@
   (list 'cons k ms e))
 
 (defn make-prog-inst
-  [o t e p]
-  (list 'inst o t e p))
+  [o t e]
+  (list 'inst o t e))
 
 (defn make-op
   [op args]
-  (list 'op args))
+  (list 'op op args))
 
 ; boolean?, integer?, double?, string? are defined in clojure.core
 
@@ -42,7 +42,5 @@
 
 (defn constructor? [a] (and (seq? a) (not (empty? a)) (= (first a) 'cons)))
 
-(defn variable? [a] (and (seq? a)
-                         (not (empty? a))
-                         (or (symbol? a)
-                             (constructor? a))))
+; (defn variable? [a] (and (seq? a) (and (not (empty? a)) (symbol? a))))
+(def variable? symbol?)

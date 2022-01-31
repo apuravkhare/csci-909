@@ -1,9 +1,10 @@
 (ns csci-909.textIo
-  (:import '[java.io.PushbackReader])
-  (:require '[clojure.java.io :as io])
-  (:require '[clojure.ed :as edn])
   (:use [csci-909.interpreter])
   (:use [csci-909.parser]))
+
+(import java.io.PushbackReader)
+(require '[clojure.edn :as edn])
+(require '[clojure.java.io :as io])
 
 (defn read-forms
   [file]
@@ -20,7 +21,16 @@
   (let
    [forms (read-forms filepath)
     env (init-env)]
-    (loop [fs forms
-           ms '()]
-      (recur (rest forms) (conj ms (meaning (first (parse fs)) env))))))
+    (reduce (fn [acc f] (conj acc (meaning (parse f) env))) '() forms)))
+
+;; (defn process-file
+;;   [filepath]
+;;   (let
+;;    [forms (read-forms filepath)
+;;     env (init-env)]
+;;     (loop [fs forms
+;;            ms '()]
+;;       (recur (rest forms) (conj ms (meaning (let [ps (parse (first fs))]
+;;                                                 (println "parsed")
+;;                                               ps) env))))))
 

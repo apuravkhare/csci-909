@@ -78,17 +78,20 @@
                          [o (nth term 1)
                           t (nth term 2)
                           e (nth term 3)
-                          p (nth term 4)
+                          ; p (nth term 4)
                           me (meaning e env)]
                           (if (func? me)
                             (if (func? t)
-                              (meaning p (extend-env-func env (meaning e env) (lookup env o)))
-                              (meaning p (extend-env-datacons env (meaning e env) (lookup env o))))
+                              (extend-env-func env (meaning e env) (lookup env o))
+                              (extend-env-datacons env (meaning e env) (lookup env o)))
+                              ;; (meaning p (extend-env-func env (meaning e env) (lookup env o)))
+                              ;; (meaning p (extend-env-datacons env (meaning e env) (lookup env o))))
                             wrong))
+    (and (seq? term) (not (empty term)) (resolve (first term))) term
     :else (throw (Exception. (str "Unknown input: " (str term))))))
 
+; "env is a map of uniq-var -> type and overloaded-var -> (type -> type)"
 (defn init-env
-  "env is a map of uniq-var -> type and overloaded-var -> (type -> type)"
   []
   (list
    (make-data-cons 'boolean boolean)
