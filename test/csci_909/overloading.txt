@@ -1,0 +1,13 @@
+(data Point [x y])
+
+(data CPoint [c x y])
+
+(overload second)
+
+(inst second [Point] (lambda [p] 1))
+
+(inst second [CPoint] (lambda [cp] 2))
+
+(second (constructor Point [1 2]))
+
+(second (constructor CPoint ["red" 1 2]))

@@ -1,6 +1,7 @@
 (ns csci-909.textIo
   (:use [csci-909.interpreter])
-  (:use [csci-909.parser]))
+  (:use [csci-909.parser])
+  (:require [clojure.string :as str]))
 
 (import java.io.PushbackReader)
 (require '[clojure.edn :as edn])
@@ -20,17 +21,26 @@
   [filepath]
   (let
    [forms (read-forms filepath)
-    env (init-env)]
-    (reduce (fn [acc f] (conj acc (meaning (parse f) env))) '() forms)))
+    env (atom (init-env))]
+    (reduce (fn [acc f]
+                (conj acc (try
+                            (println (meaning f env))
+                            (catch Exception e (println (str "Error: " e)))
+                               )))
+            '()
+            forms)))
 
-;; (defn process-file
-;;   [filepath]
-;;   (let
-;;    [forms (read-forms filepath)
-;;     env (init-env)]
-;;     (loop [fs forms
-;;            ms '()]
-;;       (recur (rest forms) (conj ms (meaning (let [ps (parse (first fs))]
-;;                                                 (println "parsed")
-;;                                               ps) env))))))
-
+(defn run-repl
+  []
+  (println "Enter an expression. Type 'quit' to exit")
+  (loop [env (atom (init-env))]
+    (print "> ")
+    (flush)
+    (let [in (read)]
+      (if (= "quit" (str in))
+        ()
+        (if (> (count in) 0)
+         (let [res (meaning in env)]
+          (println (str res))
+          (recur env))
+          (recur env))))))

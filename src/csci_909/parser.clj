@@ -14,6 +14,7 @@
                                (println (str "Parsed: " (str ps)))
                                ps)
        (= 'inst (first arg)) (make-prog-inst (nth arg 1) (nth arg 2) (nth arg 3))
+       (= 'app (first arg)) (make-app (nth arg 1) (nth arg 2))
        ; (= 'fn (first arg)) (make-lambda)
        :else (throw (Exception. (str "Unknown form: " (str arg)))))
-     (list arg)))
+     arg))

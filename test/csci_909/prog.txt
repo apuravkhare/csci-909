@@ -1,0 +1,27 @@
+
+((lambda [y] ((lambda [z] (+ [z y])) [3])) [2])
+
+((lambda [x y] (+ [x y])) [6 6])
+
+(define f 2)
+
+(define f2 (lambda [x y] (+ [x y])))
+
+(if true 1 2)
+(if false 1 2)
+
+(f2 [1 2])
+
+(define fact (lambda [x] (if (= [0 x]) 1 (* x (fact (- [1 x]))))))
+
+(fact [2])
+
+(data Point [x y])
+
+(data CPoint [x y])
+
+(overload second)
+
+(inst second [Point] (lambda [p] 2))
+
+(second (constructor Point [1 2]))
