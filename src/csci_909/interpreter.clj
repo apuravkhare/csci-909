@@ -63,7 +63,9 @@
        (or (= (first a) '+)
            (= (first a) '-)
            (= (first a) '*)
-           (= (first a) '/))))
+           (= (first a) '/)
+           (= (first a) 'item)
+           (= (first a) 'str))))
 
 (defn define-var
   [v e env]
@@ -90,9 +92,17 @@
 (defn get-inst-type
   [vs]
   (map (fn [v] (cond (const? v)     (const-type v)
-                     (data-inst? v) (nth (v) 1)
+                     (data-inst? v) (nth v 1)
                      :else          wrong))
        vs))
+
+(defn apply-primitive
+  [f args]
+  (cond
+    (resolve f) (apply (resolve f) args)
+    (= f 'item) (if (and (= 2 (count args)) (data-inst? (first args)) (integer? (second args)))
+                  (nth (nth (first args) 2) (second args))
+                  (throw (Exception. "Invalid input to function 'item'")))))
 
 (defn meaning
   [term env]
@@ -154,23 +164,23 @@
                                 (primitive-procedure? mf) (let [vs (map (fn [e'] (meaning e' env)) e's)
                                                                 ext-env (extend-env-mult env e's vs)]
                                                             ; (println "args " (map (fn [a] (meaning a ext-env)) e's))
-                                                            (apply (resolve (first mf))
+                                                            (apply-primitive (first mf)
                                                                    (map (fn [a] (meaning a ext-env)) e's)))
                                 (func? mf) (let [args (to-list (nth mf 2))
                                                  exp (nth mf 1)
                                                  vs (map (fn [e'] (meaning e' env)) e's)]
                                              (meaning exp (extend-env-mult env args vs)))
                                 (overloaded-inst? e env) (let [vs (map (fn [e'] (meaning e' env)) e's)]
+                                                          ;;  (println (str "vs " (str (first (get-inst-type vs)))))
                                                            (loop [insts (find-inst e env)]
                                                              (if (or (= 0 (count insts)) (wrong? (first insts)))
                                                                wrong
                                                                (let [vts (get-inst-type vs)]
                                                                  (if (= vts (nth (first insts) 2))
                                                                    (meaning (concat (list (nth (first insts) 3)) vs) env)
-                                                                   (recur (rest insts)))
-                                                                 ))))
+                                                                   (recur (rest insts)))))))
                                 :else (throw (Exception. "No overload found"))))))
     ; :else (throw (Exception. (str "Unknown input: " (str term))))
 
-(defn init-env [] (list (list (list '+ '- '* '/ '= 'nth 'list)
-                              (list (list '+) (list '-) (list '*) (list '/) (list '=) (list 'nth) (list 'list)))))
+(defn init-env [] (list (list (list '+ '- '* '/ '= 'item 'str)
+                              (list (list '+) (list '-) (list '*) (list '/) (list '=) (list 'item) (list 'str)))))

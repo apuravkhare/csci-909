@@ -1,0 +1,9 @@
+(overload add)
+
+(inst add [integer integer] (lambda [x y] (+ x y)))
+
+(inst add [string string] (lambda [x y] (str x y)))
+
+(add 1 1)
+
+(add "abc" "def")
