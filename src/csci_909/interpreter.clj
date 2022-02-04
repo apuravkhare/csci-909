@@ -1,93 +1,41 @@
 (ns csci-909.interpreter
   (:use [csci-909.term])
-  (:use [csci-909.util]))
+  (:use [csci-909.util])
+  (:use [csci-909.env]))
 
 (def wrong '(wrong))
 
-(defn wrong? [a] (and (seq? a) (not (empty? a)) (= (first a) 'wrong)))
-
-(defn make-func
-  [id f]
-  (list 'func id f))
-
-(defn make-data-cons
-  [id f]
-  (list 'data-cons id f))
+(defn wrong? [a] (and (tagged-list? a) (= (first a) 'wrong)))
 
 (defn func?
   [a]
-  (and (seq? a) (not (empty? a)) (= (first a) 'closure)))
-
-(defn data-cons?
-  [a]
-  (and (seq? a) (not (empty? a)) (= (first a) 'data-cons)))
-
-(defn find-data-constructor
-  [env v]
-  (filter (fn [e] (= v (nth e 2))) (filter data-cons? env)))
-
-(defn extend-env
-  [env u v]
-  (reset! env (cons (list [u] [v]) @env))
-  env)
-
-(defn extend-env-mult
-  [env us vs]
-  (if (= (count us) (count vs))
-    (do
-      (reset! env (cons (list us vs) @env))
-      env)
-    (throw (Exception. "Mismatching arguments to environment"))))
-
-(defn extend-env-func
-  [env f g]
-  (fn [v]
-    (if (lookup env v)
-      (f v)
-      (g v))))
-
-(defn extend-env-datacons
-  [env f g]
-  (fn [v]
-    (if (find-data-constructor env v)
-      (f v)
-      (g v))))
+  (and (tagged-list? a) (= (first a) 'closure)))
 
 (defn make-closure
-  [f args]
-  (list 'closure f args))
+  [f args env]
+  (list 'closure f args env))
 
 (defn primitive-procedure?
   [a]
-  (and (seq? a) (not (empty? a))
+  (and (tagged-list? a)
        (or (= (first a) '+)
            (= (first a) '-)
            (= (first a) '*)
            (= (first a) '/)
+           (= (first a) '=)
            (= (first a) 'item)
            (= (first a) 'str))))
 
-(defn define-var
-  [v e env]
-  (let [keys (first (last @env))
-        vals (second (last @env))]
-    (reset! env (concat (take (- (count @env) 1) @env) (list (list (cons v keys) (cons e vals)))))))
-
 (defn overloaded-inst?
   [o env]
-  (loop [keys (first (last @env))
-        vals (second (last @env))]
-    (if (empty? keys)
-      false
-      (if
-       (and (= (first keys) o) (overload? (first vals)))
-        true
-        (recur (rest keys) (rest vals))))))
+  (try
+    (lookup-environment o env)
+    (catch Exception _
+      false)))
 
 (defn find-inst
   [o env]
-  (let [vals (second (last @env))]
-    (filter (fn [val] (and (prog-inst? val) (= o (nth val 1)))) vals)))
+  (filter prog-inst? (lookup-environment* o env)))
 
 (defn get-inst-type
   [vs]
@@ -106,26 +54,26 @@
 
 (defn meaning
   [term env]
-  ;; (println "meaning " term)
+  ;; (println (str "meaning " term " | env " (count env)))
   (cond
     (const? term)    term
     (data-inst? term)    term
-    (variable? term) (lookup @env term)
+    (variable? term) (lookup-environment term env)
     (lambda? term)   (let
                       [us (to-list (nth term 1))
                        e (nth term 2)]
-                       (make-closure e us))
+                       (make-closure e us env))
     (overload? term)     (do
-                           (define-var (nth term 1) (make-overload (nth term 1)) env)
-                           (define-var (nth term 1) wrong env)
+                           (define-variable! (nth term 1) (make-overload (nth term 1)) env)
+                           (define-variable! (nth term 1) wrong env)
                            (nth term 1))
     (let? term)      (let
                       [x  (nth term 1)
                        e  (nth term 2)
                        e' (nth term 3)]
-                       (meaning e' (extend-env env x (meaning e env))))
+                       (meaning e' (extend-environment x (meaning e env) env)))
     (constructor? term) (let
-                         [k  (lookup @env (nth term 1))
+                         [k  (lookup-environment (nth term 1) env)
                           id (nth k 1)
                           args (nth k 2)
                           ms (to-list (nth term 2))]
@@ -139,48 +87,45 @@
                           me (meaning e env)]
                           (if (func? me)
                             (do
-                              (define-var o term env)
+                              (overload-variable! o term env)
                               term)
                             wrong))
     (data? term)         (let [id   (nth term 1)
                                args (to-list (nth term 2))]
-                           (extend-env env id (make-constructor id args))
+                           (define-variable! id (make-constructor id args) env)
                            id)
     (define? term)       (let [v (nth term 1)
                                e (meaning (nth term 2) env)]
-                             (define-var v e env)
-                             e)
+                             (define-variable! v e env)
+                             v)
     (if-expr? term)      (let [c (nth term 1)
                                t (nth term 2)
                                f (nth term 3)]
                            (if (meaning c env)
                              (meaning t env)
                              (meaning f env)))
+    ;;; everything else is function application
     :else                (let
                              [e  (nth term 0)
                               e's (drop 1 term)
                               mf (meaning e env)]
                               (cond
                                 (primitive-procedure? mf) (let [vs (map (fn [e'] (meaning e' env)) e's)
-                                                                ext-env (extend-env-mult env e's vs)]
-                                                            ; (println "args " (map (fn [a] (meaning a ext-env)) e's))
-                                                            (apply-primitive (first mf)
-                                                                   (map (fn [a] (meaning a ext-env)) e's)))
+                                                                ext-env (extend-environment* e's vs env)]
+                                                            (apply-primitive (first mf) vs))
                                 (func? mf) (let [args (to-list (nth mf 2))
                                                  exp (nth mf 1)
-                                                 vs (map (fn [e'] (meaning e' env)) e's)]
-                                             (meaning exp (extend-env-mult env args vs)))
+                                                 vs (map (fn [e'] (meaning e' env)) e's)
+                                                 f-env (nth mf 3)]
+                                             (meaning exp (extend-environment* args vs f-env)))
                                 (overloaded-inst? e env) (let [vs (map (fn [e'] (meaning e' env)) e's)]
-                                                          ;;  (println (str "vs " (str (first (get-inst-type vs)))))
                                                            (loop [insts (find-inst e env)]
-                                                             (if (or (= 0 (count insts)) (wrong? (first insts)))
+                                                              (if (or (= 0 (count insts)) (wrong? (first insts)))
                                                                wrong
                                                                (let [vts (get-inst-type vs)]
                                                                  (if (= vts (nth (first insts) 2))
                                                                    (meaning (concat (list (nth (first insts) 3)) vs) env)
                                                                    (recur (rest insts)))))))
                                 :else (throw (Exception. "No overload found"))))))
-    ; :else (throw (Exception. (str "Unknown input: " (str term))))
 
-(defn init-env [] (list (list (list '+ '- '* '/ '= 'item 'str)
-                              (list (list '+) (list '-) (list '*) (list '/) (list '=) (list 'item) (list 'str)))))
+(defn init-env [] global-environment)

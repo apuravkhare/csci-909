@@ -1,6 +1,7 @@
 (ns csci-909.term
   (:require [blancas.kern.core :refer :all])
-  (:require [blancas.kern.lexer.basic]))
+  (:require [blancas.kern.lexer.basic])
+  (:use [csci-909.util]))
 
 (defn make-lambda
   [u e]
@@ -36,21 +37,21 @@
 
 ; boolean?, integer?, double?, string? are defined in clojure.core
 
-(defn op? [a] (and (seq? a) (not (empty? a)) (= (first a) 'op)))
+(defn op? [a] (and (tagged-list? a) (= (first a) 'op)))
 
 (defn app? [a] (and (seq? a) (= (count a) 2)))
 
-(defn if? [a] (and (seq? a) (not (empty? a)) (= (first a) 'if)))
+(defn if? [a] (and (tagged-list? a) (= (first a) 'if)))
 
-(defn lambda? [a] (and (seq? a) (not (empty? a)) (= (first a) 'lambda)))
+(defn lambda? [a] (and (tagged-list? a) (= (first a) 'lambda)))
 
-(defn let? [a] (and (seq? a) (not (empty? a)) (= (first a) 'let)))
+(defn let? [a] (and (tagged-list? a) (= (first a) 'let)))
 
-(defn prog-inst? [a] (and (seq? a) (not (empty? a)) (= (first a) 'inst)))
+(defn prog-inst? [a] (and (tagged-list? a) (= (first a) 'inst)))
 
-(defn constructor? [a] (and (seq? a) (not (empty? a)) (= (first a) 'constructor)))
+(defn constructor? [a] (and (tagged-list? a) (= (first a) 'constructor)))
 
-(defn data-inst? [a] (and (seq? a) (not (empty? a)) (= (first a) 'data-inst)))
+(defn data-inst? [a] (and (tagged-list? a) (= (first a) 'data-inst)))
 
 ; (defn variable? [a] (and (seq? a) (and (not (empty? a)) (symbol? a))))
 (def variable? symbol?)
@@ -62,13 +63,13 @@
       (char? a)
       (string? a)))
 
-(defn data? [a] (and (seq? a) (not (empty? a)) (= (first a) 'data)))
+(defn data? [a] (and (tagged-list? a) (= (first a) 'data)))
 
-(defn define? [a] (and (seq? a) (not (empty? a)) (= (first a) 'define)))
+(defn define? [a] (and (tagged-list? a) (= (first a) 'define)))
 
-(defn overload? [a] (and (seq? a) (not (empty? a)) (= (first a) 'overload)))
+(defn overload? [a] (and (tagged-list? a) (= (first a) 'overload)))
 
-(defn if-expr? [a] (and (seq? a) (not (empty? a)) (= (first a) 'if)))
+(defn if-expr? [a] (and (tagged-list? a) (= (first a) 'if)))
 
 (defn const-type
   [v]

@@ -21,11 +21,11 @@
   [filepath]
   (let
    [forms (read-forms filepath)
-    env (atom (init-env))]
+    env (init-env)]
     (reduce (fn [acc f]
                 (conj acc (try
                             (println (meaning f env))
-                            (catch Exception e (println (str "Error: " e)))
+                            ;; (catch Exception e (println (str "Error: " e)))
                                )))
             '()
             forms)))
@@ -33,14 +33,15 @@
 (defn run-repl
   []
   (println "Enter an expression. Type 'quit' to exit")
-  (loop [env (atom (init-env))]
+  (loop [env (init-env)]
     (print "> ")
     (flush)
     (let [in (read)]
       (if (= "quit" (str in))
         ()
-        (if (> (count in) 0)
-         (let [res (meaning in env)]
+        (if (> (count (str in)) 0)
+         (let [res (try (meaning in env)
+                        (catch Exception e (str "Error: " e)))]
           (println (str res))
           (recur env))
           (recur env))))))

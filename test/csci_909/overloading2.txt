@@ -4,6 +4,10 @@
 
 (inst add [string string] (lambda [x y] (str x y)))
 
+(inst add [double double] (lambda [x y] (- x y)))
+
 (add 1 1)
 
 (add "abc" "def")
+
+(add 3.0 2.0)

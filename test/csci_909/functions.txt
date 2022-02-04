@@ -1,0 +1,11 @@
+((lambda [] 2))
+
+((lambda [x] (if (= x 0) 1 x)) 0)
+
+((lambda [x] (if (= x 0) 1 x)) 10)
+
+(define fact (lambda [x] (if (= 0 x) 1 (* x (fact (- x 1))))))
+
+(fact 2)
+
+(fact 5)

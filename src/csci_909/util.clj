@@ -11,6 +11,8 @@
 ;;         (second (first ps))
 ;;         (recur (rest ps))))))
 
+(defn tagged-list? [a] (and (seq? a) (not (empty? a))))
+
 (defn lookup
   [pairs key]
   (if (empty? pairs)
