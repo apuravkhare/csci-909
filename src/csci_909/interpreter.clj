@@ -7,14 +7,6 @@
 
 (defn wrong? [a] (and (tagged-list? a) (= (first a) 'wrong)))
 
-(defn func?
-  [a]
-  (and (tagged-list? a) (= (first a) 'closure)))
-
-(defn make-closure
-  [f args env]
-  (list 'closure f args env))
-
 (defn primitive-procedure?
   [a]
   (and (tagged-list? a)
@@ -82,7 +74,6 @@
                             (throw (Exception. (str "Mismatched arguments passed to " id)))))
     (prog-inst? term)   (let
                          [o (nth term 1)
-                          ts (to-list (nth term 2))
                           e (nth term 3)
                           me (meaning e env)]
                           (if (func? me)

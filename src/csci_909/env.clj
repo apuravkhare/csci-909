@@ -9,12 +9,14 @@
   (list (java.util.LinkedList. vars) (java.util.LinkedList. vals)))
 
 (defn extend-environment*
+  "add a new layer to the environment containing the given variables and their values."
   [vars vals base-env]
   (if (= (count vars) (count vals))
     (conj base-env (make-frame vars vals))
     (throw (Exception. "Mismatching arguments passed to extend-environment"))))
 
 (defn extend-environment
+  "add a new layer to the environment containing the given variable and its value."
   [var val base-env]
   (extend-environment* [var] [val] base-env))
 
@@ -53,6 +55,7 @@
          (recur (rest pairs) res)))))
 
 (defn define-variable!
+  "add a variable definition to the topmost environment/redefine if one already exists."
   [var val env]
   (loop [pairs env]
     (if (empty-environment? (first pairs))
@@ -75,6 +78,7 @@
         (if res res (recur (rest pairs)))))))
 
 (defn overload-variable!
+  "add a variable definition to the topmost environment, doesn't rewrite if any already exist."
   [var val env]
   (let [keys (first (first env))
         vals (second (first env))]

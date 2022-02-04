@@ -1,19 +1,9 @@
 (ns csci-909.term
-  (:require [blancas.kern.core :refer :all])
-  (:require [blancas.kern.lexer.basic])
   (:use [csci-909.util]))
-
-(defn make-lambda
-  [u e]
-  (list 'lambda u e))
 
 (defn make-app
   [e e']
   (list e e'))
-
-(defn make-let
-  [x e e']
-  (list 'let x e e'))
 
 (defn make-constructor
   [k ms]
@@ -35,13 +25,11 @@
   [v]
   (list 'overload v))
 
+(defn make-closure
+  [f args env]
+  (list 'closure f args env))
+
 ; boolean?, integer?, double?, string? are defined in clojure.core
-
-(defn op? [a] (and (tagged-list? a) (= (first a) 'op)))
-
-(defn app? [a] (and (seq? a) (= (count a) 2)))
-
-(defn if? [a] (and (tagged-list? a) (= (first a) 'if)))
 
 (defn lambda? [a] (and (tagged-list? a) (= (first a) 'lambda)))
 
@@ -53,8 +41,11 @@
 
 (defn data-inst? [a] (and (tagged-list? a) (= (first a) 'data-inst)))
 
-; (defn variable? [a] (and (seq? a) (and (not (empty? a)) (symbol? a))))
 (def variable? symbol?)
+
+(defn func?
+  [a]
+  (and (tagged-list? a) (= (first a) 'closure)))
 
 (defn const? [a]
   (or (boolean? a)

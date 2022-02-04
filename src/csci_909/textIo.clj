@@ -1,7 +1,5 @@
 (ns csci-909.textIo
-  (:use [csci-909.interpreter])
-  (:use [csci-909.parser])
-  (:require [clojure.string :as str]))
+  (:use [csci-909.interpreter]))
 
 (import java.io.PushbackReader)
 (require '[clojure.edn :as edn])
@@ -25,7 +23,7 @@
     (reduce (fn [acc f]
                 (conj acc (try
                             (println (meaning f env))
-                            ;; (catch Exception e (println (str "Error: " e)))
+                            (catch Exception e (println (str "Error: " e)))
                                )))
             '()
             forms)))
