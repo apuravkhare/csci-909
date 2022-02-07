@@ -9,6 +9,10 @@
   [k ms]
   (list 'constructor k ms))
 
+(defn make-fn-constructor
+  [k ip op]
+  (list 'fn-constructor k ip op))
+
 (defn make-prog-inst
   [o t e]
   (list 'inst o t e))
@@ -16,6 +20,11 @@
 (defn make-data-inst
   [k args]
   (list 'data-inst k args))
+
+(defn make-data-fn-inst
+  [k l]
+  (list 'data-fn-inst k l))
+
 
 (defn make-op
   [op args]
@@ -39,7 +48,11 @@
 
 (defn constructor? [a] (and (tagged-list? a) (= (first a) 'constructor)))
 
+(defn fn-constructor? [a] (and (tagged-list? a) (= (first a) 'fn-constructor)))
+
 (defn data-inst? [a] (and (tagged-list? a) (= (first a) 'data-inst)))
+
+(defn data-fn-inst? [a] (and (tagged-list? a) (= (first a) 'data-fn-inst)))
 
 (def variable? symbol?)
 
@@ -55,6 +68,8 @@
       (string? a)))
 
 (defn data? [a] (and (tagged-list? a) (= (first a) 'data)))
+
+(defn data-fn? [a] (and (tagged-list? a) (= (first a) 'data-fn)))
 
 (defn define? [a] (and (tagged-list? a) (= (first a) 'define)))
 

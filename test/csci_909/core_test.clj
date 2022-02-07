@@ -4,6 +4,7 @@
 
 (def files-to-test
   ["./test/csci_909/forms.txt"
+   "./test/csci_909/data.txt"
    "./test/csci_909/functions.txt"
    "./test/csci_909/overloading1.txt"
    "./test/csci_909/overloading2.txt"

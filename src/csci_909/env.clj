@@ -93,5 +93,5 @@
                                          empty-environment)]
     initial-env))
 
-(def global-environment (setup-environment))
+(defn global-environment [] (setup-environment))
 

@@ -48,8 +48,9 @@
   [term env]
   ;; (println (str "meaning " term " | env " (count env)))
   (cond
-    (const? term)    term
+    (const? term)        term
     (data-inst? term)    term
+    (data-fn-inst? term) term
     (variable? term) (lookup-environment term env)
     (lambda? term)   (let
                       [us (to-list (nth term 1))
@@ -64,14 +65,26 @@
                        e  (nth term 2)
                        e' (nth term 3)]
                        (meaning e' (extend-environment x (meaning e env) env)))
-    (constructor? term) (let
-                         [k  (lookup-environment (nth term 1) env)
-                          id (nth k 1)
-                          args (nth k 2)
-                          ms (to-list (nth term 2))]
-                          (if (= (count ms) (count args))
-                           (make-data-inst id (map (fn [m] (meaning m env)) ms))
-                            (throw (Exception. (str "Mismatched arguments passed to " id)))))
+    (constructor? term) (let [k  (lookup-environment (nth term 1) env)
+                              id (nth k 1)]
+                         (cond
+                           (fn-constructor? k)
+                           (let [ip (nth k 2)
+                                 op (nth k 3)
+                                 l (nth term 2)
+                                 us (to-list (nth l 1))]
+                                 (if (lambda? l)
+                                   (if (= (count ip) (count us))
+                                     (make-data-fn-inst id l)
+                                     (throw (Exception. (str "Mismatched arguments passed to " id))))
+                                   (throw (Exception. (str "Function constructor must be initialized with a function " id)))))
+                           :else
+                           (let
+                            [args (nth k 2)
+                             ms (to-list (nth term 2))]
+                             (if (= (count ms) (count args))
+                               (make-data-inst id (map (fn [m] (meaning m env)) ms))
+                               (throw (Exception. (str "Mismatched arguments passed to " id)))))))
     (prog-inst? term)   (let
                          [o (nth term 1)
                           e (nth term 3)
@@ -85,6 +98,13 @@
                                args (to-list (nth term 2))]
                            (define-variable! id (make-constructor id args) env)
                            id)
+    (data-fn? term)      (let [id   (nth term 1)
+                               args (to-list (nth term 2))]
+                           (if (= 0 (count args))
+                           (throw (Exception. "At least one type argument expected for the type " (str id)))
+                           (do
+                            (define-variable! id (make-fn-constructor id (take (- (count args) 1) args) (last args)) env)
+                             id)))
     (define? term)       (let [v (nth term 1)
                                e (meaning (nth term 2) env)]
                              (define-variable! v e env)
@@ -109,6 +129,16 @@
                                                  vs (map (fn [e'] (meaning e' env)) e's)
                                                  f-env (nth mf 3)]
                                              (meaning exp (extend-environment* args vs f-env)))
+                                (data-fn-inst? mf) (let [k (lookup-environment (nth mf 1) env)
+                                                         ip (nth k 2)
+                                                         op (nth k 3)
+                                                         l (nth mf 2)
+                                                         vs (map (fn [e'] (meaning e' env)) e's)
+                                                         vts (get-inst-type vs)]
+                                                     (println (str "l " (list l vs)))
+                                                     (if (= vts ip)
+                                                       (meaning (concat (list l) vs) env)
+                                                       (throw (Exception. (str "Incorrect arguments passed to function " (str e))))))
                                 (overloaded-inst? e env) (let [vs (map (fn [e'] (meaning e' env)) e's)]
                                                            (loop [insts (find-inst e env)]
                                                               (if (or (= 0 (count insts)) (wrong? (first insts)))
@@ -119,4 +149,4 @@
                                                                    (recur (rest insts)))))))
                                 :else (throw (Exception. "No overload found"))))))
 
-(defn init-env [] global-environment)
+(defn init-env [] (global-environment))
