@@ -1,10 +1,10 @@
 (overload add)
 
-(inst add [integer integer] (lambda [x y] (+ x y)))
+(inst add [integer integer] (lambda [x y] (*prim+i x y)))
 
-(inst add [string string] (lambda [x y] (str x y)))
+(inst add [string string] (lambda [x y] (*prim+str x y)))
 
-(inst add [double double] (lambda [x y] (- x y)))
+(inst add [double double] (lambda [x y] (*prim-i x y)))
 
 (add 1 1)
 

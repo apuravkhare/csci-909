@@ -6,3 +6,7 @@
 (defn to-list
   [s]
   (concat s))
+
+(defn in?
+  [coll elm]
+  (some (fn [c] (= elm c)) coll))

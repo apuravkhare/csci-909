@@ -162,4 +162,7 @@
                                                          (throw (Exception. "Record accessor applied to too many arguments."))))
                                 :else (throw (Exception. "No overload found"))))))
 
-(defn init-env [] (global-environment))
+(defn init-env [] (let [initial-env (extend-environment* (list '+ '- '* '/ '= 'item 'str 'get)
+                                                          (list (list '+) (list '-) (list '*) (list '/) (list '=) (list 'item) (list 'str) (list 'get))
+                                                          (global-environment))]
+                     initial-env))

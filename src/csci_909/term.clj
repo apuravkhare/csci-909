@@ -5,6 +5,10 @@
   [e e']
   (list e e'))
 
+(defn make-lambda
+  [a e]
+  (list 'lambda a e))
+
 (defn make-constructor
   [k ms]
   (list 'constructor k ms))
@@ -46,6 +50,13 @@
   [t]
   (list 'inst-predicate t))
 
+(defn make-primitive-action
+  [p a]
+  (list 'primitive-action p a))
+
+(defn make-typeclass-def
+  [t a fs]
+  (list 'typeclass-def t a fs))
 
 ; boolean?, integer?, double?, string? are defined in clojure.core
 
@@ -91,6 +102,12 @@
 (defn inst-accessor? [a] (and (tagged-list? a) (= (first a) 'inst-accessor)))
 
 (defn inst-predicate? [a] (and (tagged-list? a) (= (first a) 'inst-predicate)))
+
+(defn primitive-action? [a] (and (tagged-list? a) (= (first a) 'primitive-action)))
+
+(defn typeclass-def? [a] (and (tagged-list? a) (= (first a) 'typeclass-def)))
+
+(defn typeclass-inst? [a] (and (tagged-list? a) (= (first a) 'typeclass-inst)))
 
 (defn const-type
   [v]

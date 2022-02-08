@@ -1,5 +1,6 @@
 (ns csci-909.textIo
-  (:use [csci-909.interpreter]))
+  ;; (:use [csci-909.interpreter])
+  (:use [csci-909.interpreterTc]))
 
 (import java.io.PushbackReader)
 (require '[clojure.edn :as edn])

@@ -6,8 +6,9 @@
 
 (define p (Point 3 4))
 (Point? p)
+(Point? 2)
 (Point-x p)
-(Point-x p)
+(Point-y p)
 
 (CPoint "red" 1 2)
 
