@@ -2,12 +2,19 @@
 
 (data CPoint [c x y])
 
-(constructor Point [1 2])
+(Point 1 2)
 
-(constructor CPoint ["red" 1 2])
+(define p (Point 3 4))
+(Point? p)
+(Point-x p)
+(Point-x p)
 
-(data-fn Calc [integer integer integer])
+(CPoint "red" 1 2)
 
-(define add (constructor Calc (lambda [x y] (+ x y))))
+(data-fn Calc [integer integer])
+
+(define add (Calc (lambda [x y] (+ x y))))
 
 (add 2 2)
+
+(add "ab" "cd")

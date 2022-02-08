@@ -88,8 +88,8 @@
 
 (defn setup-environment
   []
-  (let [initial-env (extend-environment* (list '+ '- '* '/ '= 'item 'str)
-                                         (list (list '+) (list '-) (list '*) (list '/) (list '=) (list 'item) (list 'str))
+  (let [initial-env (extend-environment* (list '+ '- '* '/ '= 'item 'str 'get)
+                                         (list (list '+) (list '-) (list '*) (list '/) (list '=) (list 'item) (list 'str) (list 'get))
                                          empty-environment)]
     initial-env))
 

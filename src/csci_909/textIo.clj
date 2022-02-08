@@ -23,7 +23,7 @@
     (reduce (fn [acc f]
                 (conj acc (try
                             (println (meaning f env))
-                            ; (catch Exception e (println (str "Error: " e)))
+                            (catch Exception e (println (str "Error: " e)))
                                )))
             '()
             forms)))

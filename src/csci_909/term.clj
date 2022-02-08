@@ -10,8 +10,8 @@
   (list 'constructor k ms))
 
 (defn make-fn-constructor
-  [k ip op]
-  (list 'fn-constructor k ip op))
+  [k ip]
+  (list 'fn-constructor k ip))
 
 (defn make-prog-inst
   [o t e]
@@ -38,6 +38,15 @@
   [f args env]
   (list 'closure f args env))
 
+(defn make-inst-accessor
+  [t a]
+  (list 'inst-accessor t a))
+
+(defn make-inst-predicate
+  [t]
+  (list 'inst-predicate t))
+
+
 ; boolean?, integer?, double?, string? are defined in clojure.core
 
 (defn lambda? [a] (and (tagged-list? a) (= (first a) 'lambda)))
@@ -53,6 +62,8 @@
 (defn data-inst? [a] (and (tagged-list? a) (= (first a) 'data-inst)))
 
 (defn data-fn-inst? [a] (and (tagged-list? a) (= (first a) 'data-fn-inst)))
+
+(defn typeclass? [a] (and (tagged-list? a) (= (first a) 'typeclass)))
 
 (def variable? symbol?)
 
@@ -76,6 +87,10 @@
 (defn overload? [a] (and (tagged-list? a) (= (first a) 'overload)))
 
 (defn if-expr? [a] (and (tagged-list? a) (= (first a) 'if)))
+
+(defn inst-accessor? [a] (and (tagged-list? a) (= (first a) 'inst-accessor)))
+
+(defn inst-predicate? [a] (and (tagged-list? a) (= (first a) 'inst-predicate)))
 
 (defn const-type
   [v]

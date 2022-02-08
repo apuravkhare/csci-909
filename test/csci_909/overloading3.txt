@@ -4,10 +4,10 @@
 
 (overload second)
 
-(inst second [Point] (lambda [p] (item p 1)))
+(inst second [Point] (lambda [p] (Point-y p)))
 
-(inst second [CPoint] (lambda [cp] (item cp 2)))
+(inst second [CPoint] (lambda [cp] (CPoint-y cp)))
 
-(second (constructor Point [1 2]))
+(second (Point 1 2))
 
-(second (constructor CPoint ["red" 1 2]))
+(second (CPoint "red" 1 2))

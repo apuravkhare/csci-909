@@ -1,0 +1,11 @@
+(typeclass Num a
+ (add [a a])
+ (sub [a a])
+ (neg [a]))
+
+(data Integer [x])
+
+(typeclass-inst Num Integer
+ (add (lambda [x y] (+ x y)))
+ (sub (lambda [x y] (- x y)))
+ (neg (lambda [x]  (* -1 x))))
