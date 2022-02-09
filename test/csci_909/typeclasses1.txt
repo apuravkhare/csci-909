@@ -1,13 +1,70 @@
 (typeclass Num a
  (+ [a a])
  (- [a a])
+ (* [a a])
  (neg [a]))
+
+(typeclass Eq a
+ (== [a a])
+ (!= [a a]))
+
+(typeclass Ord a
+ (< [a a])
+ (> [a a])
+ (<= [a a])
+ (>= [a a]))
 
 (typeclass-inst Num integer
  (+ [x y] (*prim+i x y))
  (- [x y] (*prim-i x y))
+ (* [x y] (*prim*i x y))
  (neg [x] (*prim*i -1 x)))
+
+(typeclass-inst Eq integer
+ (== [x y] (*prim=i x y))
+ (!= [x y] (*prim!bool (== x y))))
+
+(typeclass-inst Ord integer
+ (< [x y] (*prim<i x y))
+ (> [x y] (*prim>i x y))
+ (<= [x y] (*prim<=i x y))
+ (>= [x y] (*prim>=i x y)))
 
 (+ 2 2)
 
-(+ 2.0 2.0)
+(+ 2.0 2.0) ;; expected to fail
+
+(== 2 2)
+(== 2 4)
+(!= 2 4)
+(!= 2 2)
+
+(> 2 3)
+(< 2 3)
+
+(define fact (lambda [x] (if (== 0 x) 1 (* x (fact (- x 1))))))
+
+(fact 2)
+
+(fact 5)
+
+(define fib (lambda [p1 p2 i i'] (if (== i 0)
+                                   0
+                                   (if (== i 1)
+                                     1
+                                     (if (== i (+ i' 2))
+                                       (+ p1 p2)
+                                       (fib p2 (+ p1 p2) i (+ i' 1)))))))
+
+(fib 0 1 2 0)
+(fib 0 1 10 0)
+
+(data Point [x y])
+
+(typeclass-inst Eq Point
+ (== [p1 p2] (*prim-and (== (Point-x p1) (Point-x p2))
+                        (== (Point-y p1) (Point-y p2))))
+ (!= [p1 p2] (*prim!bool (== p1 p2))))
+
+(== (Point 1 2) (Point 1 2))
+(== (Point 1 2) (Point 2 1))

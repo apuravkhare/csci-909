@@ -12,13 +12,24 @@
    '*prim*i
    '*primdivi
    '*prim=i
+   '*prim<i
+   '*prim>i
+   '*prim<=i
+   '*prim>=i
    '*prim+d
    '*prim-d
    '*prim*d
    '*primdivd
    '*prim=d
-   ; '*item
-   '*prim+str))
+   '*prim<d
+   '*prim>d
+   '*prim<=d
+   '*prim>=d
+   '*prim+str
+   '*prim=str
+   '*prim!bool
+   '*prim-and
+   '*prim-or))
 
 (def primitive-actions
   (list
@@ -27,15 +38,24 @@
    (make-primitive-action '*prim*i (fn [args] (apply * args)))
    (make-primitive-action '*primdivi (fn [args] (apply / args)))
    (make-primitive-action '*prim=i (fn [args] (apply = args)))
+   (make-primitive-action '*prim<i (fn [args] (apply < args)))
+   (make-primitive-action '*prim>i (fn [args] (apply > args)))
+   (make-primitive-action '*prim<=i (fn [args] (apply <= args)))
+   (make-primitive-action '*prim>=i (fn [args] (apply >= args)))
    (make-primitive-action '*prim+d (fn [args] (apply + args)))
    (make-primitive-action '*prim-d (fn [args] (apply - args)))
    (make-primitive-action '*prim*d (fn [args] (apply * args)))
    (make-primitive-action '*primdivd (fn [args] (apply / args)))
    (make-primitive-action '*prim=d (fn [args] (apply = args)))
-   ; (make-primitive-action '*item (fn [args] (if (and (= 2 (count args)) (data-inst? (first args)) (integer? (second args)))
-   ;                                           (nth (nth (first args) 2) (second args))
-   ;                                           (throw (Exception. "Invalid input to function 'item'")))))
-   (make-primitive-action '*prim+str (fn [args] (apply str args)))))
+   (make-primitive-action '*prim<d (fn [args] (apply < args)))
+   (make-primitive-action '*prim>d (fn [args] (apply > args)))
+   (make-primitive-action '*prim<=d (fn [args] (apply <= args)))
+   (make-primitive-action '*prim>=d (fn [args] (apply >= args)))
+   (make-primitive-action '*prim+str (fn [args] (apply str args)))
+   (make-primitive-action '*prim=str (fn [args] (apply = args)))
+   (make-primitive-action '*prim!bool (fn [args] (apply not args)))
+   (make-primitive-action '*prim-and (fn [args] (reduce (fn [acc a] (and acc a)) true args)))
+   (make-primitive-action '*prim-or (fn [args] (reduce (fn [acc a] (or acc a)) false args)))))
 
 (defn primitive-procedure? [p] (and (tagged-list? p) (in? primitives (nth p 1))))
 

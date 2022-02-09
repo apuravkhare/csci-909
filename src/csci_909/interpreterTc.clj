@@ -31,7 +31,7 @@
   (cond (primitive-type? t) t
         :else (let [t' (lookup-environment t env)]
                (if (constructor? t')
-                 t'
+                 (nth t' 1)
                  (throw (Exception. (str "Data type not found " t)))))))
 
 (defn create-overloaded-fn
@@ -169,7 +169,7 @@
                                                        vs (map (fn [e'] (meaning e' env)) e's)]
                                                    (if (= 1 (count vs))
                                                      (if (= (get-inst-type (first vs)) t)
-                                                       (get (nth (first vs) 2) a)
+                                                        (get (nth (first vs) 2) a)
                                                        (throw (Exception. "Record accessor applied to invalid type.")))
                                                      (throw (Exception. "Record accessor applied to too many arguments."))))
                              (inst-predicate? mf) (let [t (nth mf 1)
