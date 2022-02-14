@@ -1,6 +1,7 @@
 (ns csci-909.textIo
   ;; (:use [csci-909.interpreter])
-  (:use [csci-909.interpreterTc]))
+  (:use [csci-909.interpreterTc])
+  (:use [csci-909.checker]))
 
 (import java.io.PushbackReader)
 (require '[clojure.edn :as edn])
@@ -21,6 +22,7 @@
   (let
    [forms (read-forms filepath)
     env (init-env)]
+    (check-program-5tuple (split-decl forms))
     (reduce (fn [acc f]
                 (conj acc (try
                             (println (meaning f env))

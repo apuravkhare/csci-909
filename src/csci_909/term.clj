@@ -58,6 +58,12 @@
   [t a fs]
   (list 'typeclass-def t a fs))
 
+(defn make-if-expr
+  [c t f]
+  (list 'if c t f))
+
+(defn make-lambda1 [id e] (list 'lambda1 id e)) ; new
+
 ; boolean?, integer?, double?, string? are defined in clojure.core
 
 (defn lambda? [a] (and (tagged-list? a) (= (first a) 'lambda)))
@@ -116,3 +122,47 @@
         (double? v)  'double
         (char? v)    'char
         (string? v)  'string))
+
+(defn forall-type? [a] (and (seq? a) (not (empty? a)) (= (first a) 'forall)))
+
+(defn type-decl? [a] (and (seq? a) (not (empty? a)) (= (first a) 'type)))
+
+(defn lambda1? [a] (and (seq? a) (not (empty? a)) (= (first a) 'lambda1)))
+
+(defn decl? [a] (or (type-decl? a)))
+
+; selectors
+
+(defn arg1 [a] (nth a 1))
+
+(defn arg2 [a] (nth a 2))
+
+(defn arg3 [a] (nth a 3))
+
+(defn arg4 [a] (nth a 4))
+
+;;; constructors
+
+(defn make-decls [decls] (list 'decls decls))
+
+(defn make-data-decl [id fmls cs] (list 'decl-data id fmls cs))
+
+(defn make-data-construct [id t] (list 'constructor id t))
+
+(defn make-type-decl [id t] (list 'decl-type id t))
+
+(defn make-boolean-type [] 'boolean)
+
+(defn make-integer-type [] 'integer)
+
+(defn make-double-type [] 'double)
+
+(defn make-string-type [] 'string)
+
+(defn make-named-type [id t] (list 'NamedType id t))
+
+(defn make-list-type [t] (make-named-type '*List* t))
+
+(defn make-arrow-type [t1 t2] (list 'ArrowType t1 t2))
+
+(defn make-forall-type [ids t] (list 'forall ids t)) ; new

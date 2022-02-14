@@ -1,0 +1,8 @@
+(type pi double)
+(define pi 3.14)
+
+(type add [integer integer integer])
+(define add (lambda [x y] (*prim+i x y)))
+
+; (type fact [integer integer])
+; (define fact (lambda [x] (if (= 0 x) 1 (* x (fact (- x 1))))))

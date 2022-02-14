@@ -2,7 +2,8 @@
   (:use [csci-909.term])
   (:use [csci-909.util])
   (:use [csci-909.env])
-  (:use [csci-909.primitive]))
+  (:use [csci-909.primitive])
+  (:use [csci-909.typeclassEnv]))
 
 (def wrong '(wrong))
 
@@ -53,6 +54,7 @@
     (data-inst? term)    term
     (data-fn-inst? term) term
     (variable? term) (lookup-environment term env)
+    (decl? term)     term
     (lambda? term)   (let
                       [us (to-list (nth term 1))
                        e (nth term 2)]
@@ -179,4 +181,11 @@
                                                       (throw (Exception. "Record accessor applied to too many arguments."))))
                              :else (throw (Exception. (str "Function not found " (if (seq? term) (first term) nil))))))))
 
-(defn init-env [] (extend-environment* primitives primitive-actions (global-environment)))
+(defn init-env [] (let [init-env (global-environment)]
+                   (reduce
+                    (fn [acc t]
+                      (meaning t acc)
+                      acc)
+                    (extend-environment* primitives primitive-actions init-env)
+                    typeclassEnv)))
+
