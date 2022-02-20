@@ -64,6 +64,10 @@
 
 (defn make-lambda1 [id e] (list 'lambda1 id e)) ; new
 
+(defn make-overload-type [tc a args] (list 'tc-overload tc a args))
+
+(defn make-overload-inst [tc t f-name f dec-type] (list 'tc-inst tc t f-name f dec-type))
+
 ; boolean?, integer?, double?, string? are defined in clojure.core
 
 (defn lambda? [a] (and (tagged-list? a) (= (first a) 'lambda)))
@@ -163,6 +167,6 @@
 
 (defn make-list-type [t] (make-named-type '*List* t))
 
-(defn make-arrow-type [t1 t2] (list 'ArrowType t1 t2))
+(defn make-arrow-type [ts] (list 'arrowType ts))
 
 (defn make-forall-type [ids t] (list 'forall ids t)) ; new

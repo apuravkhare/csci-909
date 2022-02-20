@@ -54,6 +54,27 @@
                        (recur (rest keys) (rest vals) insts'))))]
          (recur (rest pairs) res)))))
 
+(defn lookup-environments
+  "finds the first occurrence of the key across multiple environments.
+   throws an exception if the key is not found."
+  [envs var]
+  (loop [envs envs]
+    (if (empty? envs)
+      (throw (Exception. (str "Unbound variable " var)))
+   (let [res' (loop [pairs (first envs)]
+    (if (empty-environment? (first pairs))
+      nil
+      (let
+       [res (loop [keys (first (first pairs))
+                   vals (second (first pairs))]
+              (if (empty? keys)
+                nil
+                (if (= var (first keys))
+                  (first vals)
+                  (recur (rest keys) (rest vals)))))]
+        (if res res (recur (rest pairs))))))]
+     (if res' res' (recur (rest envs)))))))
+
 (defn define-variable!
   "add a variable definition to the topmost environment/redefine if one already exists."
   [var val env]
@@ -88,3 +109,10 @@
 
 (defn global-environment [] empty-environment)
 
+(defn environment-keys
+  [env]
+  (loop [pairs env
+         ks    '()]
+    (if (empty-environment? (first pairs))
+      ks
+      (recur (rest pairs) (concat (first (first pairs)) ks)))))

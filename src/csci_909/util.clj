@@ -26,13 +26,21 @@
 (defn lookup-gamma [gamma x]
   (lookup-cont x gamma (fn [x] (throw (Exception. (str "Undeclared name: " (str x)))))))
 
-(defn lookup-gamma-all [gamma1 gamma2 gamma3 x]
-  (lookup-cont x
-               gamma3
-               (fn [x] (lookup-cont x
-                                    gamma2
-                                    (fn [x] (lookup-cont x
-                                                         gamma1
-                                                         (fn [x] (throw (Exception. (str "Undeclared variable: " (str x)))))))))))
-
 (defn rename-lookup [x env] (lookup-cont x env (fn [x] x)))
+
+(defn find-first
+  [f coll]
+  (first (filter f coll)))
+
+(defn find-replace
+  [to-find to-replace coll]
+  (loop [coll coll
+         coll' '()]
+    (if (empty? coll)
+      (reverse coll')
+      (if (= (first coll) to-find)
+        (recur (rest coll) (cons to-replace coll'))
+        (recur (rest coll) (cons (first coll) coll'))))))
+
+(defn unique [coll]
+  (seq (set coll)))

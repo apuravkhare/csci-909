@@ -22,14 +22,19 @@
   (let
    [forms (read-forms filepath)
     env (init-env)]
-    (check-program-5tuple (split-decl forms))
-    (reduce (fn [acc f]
+    (if
+     (try
+     (check-program-5tuple (split-decl forms))
+      ; (catch Exception e (do (println (str "Type check failed: " e)) false))
+       )
+      (reduce (fn [acc f]
                 (conj acc (try
                             (println (meaning f env))
-                            (catch Exception e (println (str "Error: " e)))
-                               )))
+                            (catch Exception e (println (str "Error: " e)))                               
+                            )))
             '()
-            forms)))
+              forms)
+      -1)))
 
 (defn run-repl
   []
