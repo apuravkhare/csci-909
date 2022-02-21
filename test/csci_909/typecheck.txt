@@ -10,24 +10,13 @@
 (type gen-num double)
 (define gen-num (lambda [] 3.14))
 
-(typeclass Num a
- (+ [a a a])
- (- [a a a])
- (* [a a a])
- (neg [a a]))
-
-(typeclass-inst Num integer
- (type + [integer integer integer])
- (+ [x y] (*prim+i x y))
-
- (type - [integer integer integer])
- (- [x y] (*prim-i x y))
- 
- (type * [integer integer integer])
- (* [x y] (*prim*i x y))
- 
- (type neg [integer integer])
- (neg [x] (*prim*i -1 x)))
-
 (type square-sum [a a a] [(Num a)])
 (define square-sum (lambda [x y] (* (+ x y) (+ x y))))
+
+(square-sum 2 3)
+(square-sum 2.0 3.0)
+
+(type fact [integer integer])
+(define fact (lambda [x] (if (== 0 x) 1 (* x (fact (- x 1))))))
+
+(fact 5)

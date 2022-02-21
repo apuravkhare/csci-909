@@ -18,7 +18,7 @@
 ;;; failure
 
 (defn failure [history message]
-  (display-history history)
+  ; (display-history history)
   (throw (Exception. message)))
 
 ;;; logic variables

@@ -66,7 +66,8 @@
 
 (defn make-overload-type [tc a args] (list 'tc-overload tc a args))
 
-(defn make-overload-inst [tc t f-name f dec-type] (list 'tc-inst tc t f-name f dec-type))
+; (defn make-overload-inst [tc t f-name f dec-type] (list 'tc-inst tc t f-name f dec-type))
+(defn make-overload-inst [tc t f-name f] (list 'tc-inst tc t f-name f))
 
 ; boolean?, integer?, double?, string? are defined in clojure.core
 
@@ -118,6 +119,8 @@
 (defn typeclass-def? [a] (and (tagged-list? a) (= (first a) 'typeclass-def)))
 
 (defn typeclass-inst? [a] (and (tagged-list? a) (= (first a) 'typeclass-inst)))
+
+(defn overloaded-type? [a] (and (tagged-list? a) (= (first a) 'tc-overload)))
 
 (defn const-type
   [v]

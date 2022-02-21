@@ -83,6 +83,6 @@
    (list 'double 'double 'boolean)
    (list 'string 'string 'string)
    (list 'string 'string 'boolean)
-   (list 'boolean 'boolean 'boolean)
    (list 'boolean 'boolean)
+   (list 'boolean 'boolean 'boolean)
    (list 'boolean 'boolean 'boolean)))

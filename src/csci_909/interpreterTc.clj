@@ -149,7 +149,7 @@
                                                             ; wrong
                                                             (throw (Exception. (str "No overload found with the given arguments for " (str e))))
                                                             (let [vts (get-inst-type* vs)]
-                                                              (if (= vts (nth (first insts) 2))
+                                                              (if (= vts (take (- (count (nth (first insts) 2)) 1) (nth (first insts) 2)))
                                                                 (meaning (concat (list (nth (first insts) 3)) vs) env)
                                                                 (recur (rest insts)))))))
                              (fn-constructor? mf) (let [id (nth mf 1)

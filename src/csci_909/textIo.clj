@@ -1,7 +1,8 @@
 (ns csci-909.textIo
   ;; (:use [csci-909.interpreter])
   (:use [csci-909.interpreterTc])
-  (:use [csci-909.checker]))
+  (:use [csci-909.checker])
+  (:use [csci-909.typeclassEnv]))
 
 (import java.io.PushbackReader)
 (require '[clojure.edn :as edn])
@@ -22,9 +23,10 @@
   (let
    [forms (read-forms filepath)
     env (init-env)]
+    ;(println (pr-str "all prog " (concat typeclassEnv forms)))
     (if
      (try
-     (check-program-5tuple (split-decl forms))
+     (check-program-5tuple (split-decl (concat typeclassEnv forms)))
       ; (catch Exception e (do (println (str "Type check failed: " e)) false))
        )
       (reduce (fn [acc f]
@@ -51,3 +53,4 @@
           (println (str res))
           (recur env))
           (recur env))))))
+
