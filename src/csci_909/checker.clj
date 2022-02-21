@@ -160,9 +160,11 @@
 (defn judge-type-call [gamma-con gamma-prim gamma-dec tc-insts exp type theta history constraints type-tc-map]
   (let [rator (first exp)
         theta-rator (lookup-environments (list gamma-dec gamma-con gamma-prim) rator)
+        theta-rator (if (empty? constraints) theta-rator (reduce (fn [acc a] (find-replace a type acc)) theta-rator (map second constraints)))
         type-op (if (seq? theta-rator) (last theta-rator) theta-rator)
         rands (rest exp)
         type-args (if (seq? theta-rator) (take (- (count theta-rator) 1) theta-rator) '())]
+    ; (and (seq? type) (subset? (set type) (set (map second constraints))))
     (if (overloaded-type? theta-rator)
       (judge-overloaded-call gamma-con gamma-prim gamma-dec tc-insts exp type theta history constraints type-tc-map)
       (do
@@ -192,7 +194,7 @@
 
 (defn judge-type [gamma-con gamma-prim gamma-dec tc-insts exp type theta history constraints type-tc-map]
   (let [new-history (extend-history history exp type)]
-    (println (str "judge " exp " " type))
+    ; (println (str "judge " exp " " type))
     (cond (boolean? exp)    (judge-type-boolean type theta new-history constraints type-tc-map)
           (integer? exp)    (judge-type-integer type theta new-history constraints type-tc-map)
           (double? exp)     (judge-type-double type theta new-history constraints type-tc-map)
@@ -243,7 +245,7 @@
              (no-repeats? code-names)
              (= (count type-names) (count code-names)))
         (throw (Exception. (str "Incompatible number of type declarations and variable definitions."))))
-    (println (pr-str "gamma-tc " gamma-tc))
+    ; (println (pr-str "gamma-tc " gamma-tc))
     (loop [tc-inst-keys (unique (environment-keys tc-insts))]
       (if (empty? tc-inst-keys)
         true
