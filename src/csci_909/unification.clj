@@ -1,5 +1,6 @@
 (ns csci-909.unification
   (:use [csci-909.util])
+  (:use [csci-909.env])
   (:use clojure.core))
 
 ;;; history
@@ -94,6 +95,20 @@
           (failure history "Type check failed!")) ; fail
         (and (seq? term1) (seq? term2)) (unifyList term1 term2 theta history)
         :else (do (println (str "Terms " term1 " " term2)) (failure history "Type check failed!")))) ; fail
+
+(defn unifyTerm5 [term1 term2 theta history constraints type-tc-map]
+  (if (empty? constraints)
+    (unifyTerm4 term1 term2 theta history)
+    (let [matches (lookup-environment* term2 type-tc-map)
+          matched-constraint (find-first (fn [c] (= (second c) term1)) constraints)]
+      (println (pr-str "term1 " term1 " term2 " term2))
+      (println (pr-str "matches " matches " matched-constraint " matched-constraint))
+      (if matched-constraint
+        (if
+         (in? matches (first matched-constraint))
+          theta
+          (failure history "Type check failed!"))
+        (unifyTerm4 term1 term2 theta history))))) ; fail
 
 (defn unifyTerm3 [term1 term2 theta]
   (unifyTerm4 term1 term2 theta (extend-history '() term1 term2)))

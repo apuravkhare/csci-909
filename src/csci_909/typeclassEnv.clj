@@ -21,7 +21,7 @@
                     (neg [x] (*prim*i -1 x)))
     (typeclass-inst Eq integer
                     (== [x y] (*prim=i x y))
-                    (!= [x y] (*prim!bool (== x y))))
+                    (!= [x y] (*prim!bool (*prim=i x y))))
     (typeclass-inst Ord integer
                     (< [x y] (*prim<i x y))
                     (> [x y] (*prim>i x y))
@@ -35,7 +35,7 @@
 
     (typeclass-inst Eq double
                     (== [x y] (*prim=d x y))
-                    (!= [x y] (*prim!bool (== x y))))
+                    (!= [x y] (*prim!bool (*prim=d x y))))
 
     (typeclass-inst Ord double
                     (< [x y] (*prim<d x y))

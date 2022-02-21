@@ -4,7 +4,7 @@
   (:use [csci-909.term])
   (:use [csci-909.env])
   (:use [csci-909.primitive])
-  (:use [csci-909.unification :only (unifyTerm4 failure extend-history theta-identity logic-variable? applyUnifier)]))
+  (:use [csci-909.unification :only (unifyTerm4 unifyTerm5 failure extend-history theta-identity logic-variable? applyUnifier)]))
 
 (defn universalize-type [t]
   (cond (vector? t) (seq t)
@@ -85,8 +85,8 @@
 (declare judge-type)
 
 (defn make-judge-type [fixed-type]
-  (fn [type theta history]
-    (unifyTerm4 type fixed-type theta (extend-history history type fixed-type))))
+  (fn [type theta history constraints type-tc-map]
+    (unifyTerm5 type fixed-type theta (extend-history history type fixed-type) constraints type-tc-map)))
 
 (def judge-type-boolean (make-judge-type (make-boolean-type)))
 
@@ -114,14 +114,13 @@
                            (judge-type gamma-con gamma-prim (extend-environment (first args) (gen-type-var) gamma-dec) tc-insts (first args) (first type-args) theta (extend-history history (first args) (first type-args)) constraints type-tc-map)
                            (recur (rest args) (rest type-args))))
                        (throw (Exception. (str "Mismatched arguments in type declaration for lambda")))))
-        theta-e (judge-type gamma-con gamma-prim gamma-dec tc-insts e type-op theta (extend-history history e type-op) constraints type-tc-map)]
+        theta-e (judge-type gamma-con gamma-prim (extend-environment* args type-args gamma-dec) tc-insts e type-op theta (extend-history history e type-op) constraints type-tc-map)]
     theta))
 
 (defn judge-overloaded-call [gamma-con gamma-prim gamma-dec tc-insts exp type theta history constraints type-tc-map]
   (let [rator (first exp)
         theta-rator (lookup-environments (list gamma-dec gamma-con gamma-prim) rator)
         overloads (lookup-environment* rator tc-insts)
-        type-op (last (nth theta-rator 3))
         rands (rest exp)
         constraint-classes (set (map first constraints))
         type-args (take (- (count theta-rator) 1) (nth theta-rator 3))
@@ -146,9 +145,17 @@
                                      (if res (recur (rest args) (rest type-args)) false))))]
                            (if res'
                              (recur (rest overloads) (cons (first overloads) matched))
-                             (recur (rest overloads) matched)))))]
-    ; (println (pr-str "theta-rands " theta-rands))
-    (filter (fn [tr] (subset? constraint-classes (set (lookup-environment* (nth tr 2) type-tc-map)))) theta-rands)))
+                             (recur (rest overloads) matched)))))
+        valid-trs (filter (fn [tr] (subset? constraint-classes (set (lookup-environment* (nth tr 2) type-tc-map)))) theta-rands)]
+    ; (println (pr-str " type " type " theta-rands " theta-rands ))
+    (if (empty? constraint-classes)
+      (if (contains? (set (map (fn [vt] (if
+                                         (= (nth theta-rator 2) (last (nth theta-rator 3)))
+                                          (arg2 vt)
+                                          (last (nth theta-rator 3)))) valid-trs)) type)
+        type
+        (throw (Exception. (pr-str "Invalid arguments to call " exp))))
+      valid-trs)))
 
 (defn judge-type-call [gamma-con gamma-prim gamma-dec tc-insts exp type theta history constraints type-tc-map]
   (let [rator (first exp)
@@ -186,10 +193,10 @@
 (defn judge-type [gamma-con gamma-prim gamma-dec tc-insts exp type theta history constraints type-tc-map]
   (let [new-history (extend-history history exp type)]
     (println (str "judge " exp " " type))
-    (cond (boolean? exp)    (judge-type-boolean type theta new-history)
-          (integer? exp)    (judge-type-integer type theta new-history)
-          (double? exp)     (judge-type-double type theta new-history)
-          (string? exp)     (judge-type-string type theta new-history)
+    (cond (boolean? exp)    (judge-type-boolean type theta new-history constraints type-tc-map)
+          (integer? exp)    (judge-type-integer type theta new-history constraints type-tc-map)
+          (double? exp)     (judge-type-double type theta new-history constraints type-tc-map)
+          (string? exp)     (judge-type-string type theta new-history constraints type-tc-map)
           (variable? exp)   (judge-type-var gamma-con gamma-prim gamma-dec exp type theta new-history)
           (lambda? exp)     (judge-type-lambda gamma-con gamma-prim gamma-dec tc-insts exp type theta new-history constraints type-tc-map)
           (if-expr? exp)    (judge-type-if gamma-con gamma-prim gamma-dec tc-insts exp type theta new-history constraints type-tc-map)

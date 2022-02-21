@@ -23,11 +23,6 @@
 
 (defn lookup-logic-var [x env] (lookup-cont x env (fn [x] nil)))
 
-(defn lookup-gamma [gamma x]
-  (lookup-cont x gamma (fn [x] (throw (Exception. (str "Undeclared name: " (str x)))))))
-
-(defn rename-lookup [x env] (lookup-cont x env (fn [x] x)))
-
 (defn find-first
   [f coll]
   (first (filter f coll)))

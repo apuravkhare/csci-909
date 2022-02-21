@@ -60,7 +60,7 @@
   (loop [pairs env
          insts '()]
     (if (empty-environment? (first pairs))
-      (reverse (filter (fn [v] (and (seq? v) (not (empty? v)))) insts))
+      (reverse (filter (fn [v] (or (not (seq? v)) (not (empty? v)))) insts))
        (let [res (loop [keys (first (first pairs))
                         vals (second (first pairs))
                         insts' insts]
