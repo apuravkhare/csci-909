@@ -92,23 +92,37 @@
         (and (constant? term1) (constant? term2))
         (if (= term1 term2)
           theta
-          (failure history "Type check failed!")) ; fail
+          (failure history (str "Type check failed!" " " term1 " " term2 ))) ; fail
         (and (seq? term1) (seq? term2)) (unifyList term1 term2 theta history)
-        :else (do (println (str "Terms " term1 " " term2)) (failure history "Type check failed!")))) ; fail
+        :else (do (println (str "Terms " term1 " " term2)) (failure history (str "Type check failed!"  " " term1 " " term2))))) ; fail
 
-(defn unifyTerm5 [term1 term2 theta history constraints type-tc-map]
-  (if (empty? constraints)
+(defn is-concrete-type?
+  [gamma-dt gamma-prim t]
+  (cond (seq? t) (let [a (second t)]
+                   (or (in? (environment-keys gamma-dt) a)
+                       (in? (environment-keys gamma-prim) a)))
+        :else    (or (in? (environment-keys gamma-dt) t)
+                     (in? (environment-keys gamma-prim) t))))
+
+(defn unifyTerm5 [term1 term2 theta history constraints gamma-dt gamma-prim type-tc-map]
+  (if (is-concrete-type? gamma-dt gamma-prim term1)
     (unifyTerm4 term1 term2 theta history)
-    (let [matches (lookup-environment* term2 type-tc-map)
-          matched-constraint (find-first (fn [c] (= (second c) term1)) constraints)]
-      (println (pr-str "term1 " term1 " term2 " term2))
-      (println (pr-str "matches " matches " matched-constraint " matched-constraint))
-      (if matched-constraint
-        (if
-         (in? matches (first matched-constraint))
-          theta
-          (failure history "Type check failed!"))
-        (unifyTerm4 term1 term2 theta history))))) ; fail
+    (if (empty? constraints)
+      (if (seq? term1)
+        (let [matches (lookup-environment* term2 type-tc-map)]
+          (if
+           (in? matches (first term1))
+            theta
+            (failure history "Type check failed!")))
+        theta)
+      (let [matches (lookup-environment* term2 type-tc-map)
+            matched-constraint (find-first (fn [c] (= (second c) term1)) constraints)]
+        (if matched-constraint
+          (if
+           (in? matches (first matched-constraint))
+            theta
+            (failure history "Type check failed!"))
+          (unifyTerm4 term1 term2 theta history))))))
 
 (defn unifyTerm3 [term1 term2 theta]
   (unifyTerm4 term1 term2 theta (extend-history '() term1 term2)))

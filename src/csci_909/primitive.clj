@@ -29,7 +29,11 @@
    '*prim=str
    '*prim!bool
    '*prim-and
-   '*prim-or))
+   '*prim-or
+   '*prim-i-str
+   '*prim-d-str
+   '*prim=bool
+   '*prim!=bool))
 
 (def primitive-actions
   (list
@@ -55,7 +59,11 @@
    (make-primitive-action '*prim=str (fn [args] (apply = args)))
    (make-primitive-action '*prim!bool (fn [args] (apply not args)))
    (make-primitive-action '*prim-and (fn [args] (reduce (fn [acc a] (and acc a)) true args)))
-   (make-primitive-action '*prim-or (fn [args] (reduce (fn [acc a] (or acc a)) false args)))))
+   (make-primitive-action '*prim-or (fn [args] (reduce (fn [acc a] (or acc a)) false args)))
+   (make-primitive-action '*prim-i-str (fn [args] (apply str args)))
+   (make-primitive-action '*prim-d-str (fn [args] (apply str args)))
+   (make-primitive-action '*prim=bool (fn [args] (apply = args)))
+   (make-primitive-action '*prim!=bool (fn [args] (apply = args)))))
 
 (defn primitive-procedure? [p] (and (tagged-list? p) (in? primitives (nth p 1))))
 
@@ -84,5 +92,9 @@
    (list 'string 'string 'string)
    (list 'string 'string 'boolean)
    (list 'boolean 'boolean)
+   (list 'boolean 'boolean 'boolean)
+   (list 'boolean 'boolean 'boolean)
+   (list 'integer 'string)
+   (list 'double 'string)
    (list 'boolean 'boolean 'boolean)
    (list 'boolean 'boolean 'boolean)))

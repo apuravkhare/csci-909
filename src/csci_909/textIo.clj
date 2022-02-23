@@ -1,7 +1,7 @@
 (ns csci-909.textIo
   ;; (:use [csci-909.interpreter])
   (:use [csci-909.interpreterTc])
-  (:use [csci-909.checker])
+  (:use [csci-909.checkerTfr])
   (:use [csci-909.typeclassEnv]))
 
 (import java.io.PushbackReader)
@@ -26,13 +26,13 @@
     ;(println (pr-str "all prog " (concat typeclassEnv forms)))
     (if
      (try
-     (check-program-5tuple (split-decl (concat typeclassEnv forms)))
-      ; (catch Exception e (do (println (str "Type check failed: " e)) false))
+      (check-program-5tuple (split-decl (concat typeclassEnv forms)))
+      ; (catch Exception e (println (str "Type check failed: " e)))
        )
       (reduce (fn [acc f]
                 (conj acc (try
                             (println (meaning f env))
-                            ; (catch Exception e (println (str "Error: " e)))                               
+                            (catch Exception e (println (str "Error: " e)))                               
                             )))
             '()
               forms)

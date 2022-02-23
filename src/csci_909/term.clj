@@ -21,6 +21,10 @@
   [o t e]
   (list 'inst o t e))
 
+(defn make-data
+  [k args ts]
+  (list 'data k args ts))
+
 (defn make-data-inst
   [k args]
   (list 'data-inst k args))
@@ -64,7 +68,11 @@
 
 (defn make-lambda1 [id e] (list 'lambda1 id e)) ; new
 
+(defn make-let [x e e'] (list 'let x e e'))
+
 (defn make-overload-type [tc a args] (list 'tc-overload tc a args))
+
+(defn make-define [v e] (list 'define v e))
 
 ; (defn make-overload-inst [tc t f-name f dec-type] (list 'tc-inst tc t f-name f dec-type))
 (defn make-overload-inst [tc t f-name f] (list 'tc-inst tc t f-name f))

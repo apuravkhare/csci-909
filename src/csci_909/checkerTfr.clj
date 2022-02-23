@@ -1,9 +1,10 @@
-(ns csci-909.checker
+(ns csci-909.checkerTfr
   (:use [csci-909.util])
   (:use clojure.set)
   (:use [csci-909.term])
   (:use [csci-909.env])
   (:use [csci-909.primitive])
+  (:use [csci-909.transformer])
   (:use [csci-909.unification :only (unifyTerm4 unifyTerm5 failure extend-history theta-identity logic-variable? applyUnifier)]))
 
 (defn universalize-type [t]
@@ -327,4 +328,5 @@
               type (lookup-environment id gamma-dec)
               constraints (try-lookup-environment id constraint-decl)]
           (let [theta (check-expression gamma-dt gamma-tc gamma-prim gamma-dec tc-insts exp type constraints type-tc-map)]
+            (transform-expression exp)
             (recur (rest code-defs-keys))))))))

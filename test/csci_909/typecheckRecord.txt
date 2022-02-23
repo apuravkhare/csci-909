@@ -1,0 +1,19 @@
+(data Pair [x y] [a b])
+
+(data Point [x y] [integer integer])
+
+(type p (Pair a a) [(Num a)])
+(define p (Pair 1 2))
+
+(type p2 (Pair a b) [(Num a) (Eq b)])
+(define p2 (Pair 1 true))
+
+(type pt Point)
+(define pt (Point 1 2))
+
+(type addPairs [(Pair a a) (Pair a a) (Pair a a)] [(Num a)])
+(define addPairs (lambda [p1 p2] (Pair (+ (Pair-x p1) (Pair-x p2)) (+ (Pair-y p1) (Pair-y p2)))))
+
+(addPairs (Pair 1 2) (Pair 3 4))
+(addPairs (Pair 1 2.0) (Pair 3 4.0))
+
