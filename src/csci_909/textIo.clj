@@ -2,7 +2,8 @@
   ;; (:use [csci-909.interpreter])
   (:use [csci-909.interpreterTc])
   (:use [csci-909.checkerTfr])
-  (:use [csci-909.typeclassEnv]))
+  (:use [csci-909.typeclassEnv])
+  (:use [csci-909.transformer]))
 
 (import java.io.PushbackReader)
 (require '[clojure.edn :as edn])
@@ -21,22 +22,28 @@
 (defn process-file
   [filepath]
   (let
-   [forms (read-forms filepath)
-    env (init-env)]
-    ;(println (pr-str "all prog " (concat typeclassEnv forms)))
-    (if
-     (try
-      (check-program-5tuple (split-decl (concat typeclassEnv forms)))
-      ; (catch Exception e (println (str "Type check failed: " e)))
-       )
-      (reduce (fn [acc f]
-                (conj acc (try
-                            (println (meaning f env))
-                            (catch Exception e (println (str "Error: " e)))                               
-                            )))
-            '()
-              forms)
-      -1)))
+   [forms    (concat typeclassEnv (read-forms filepath))
+    env      (init-env)
+    all-decl (split-decl forms)
+    type-check (try
+                  (check-program-5tuple all-decl)
+                  (catch Exception e (println (str "Type check failed: " e))))
+    transform-env (init-env)
+    prog (atom '())
+    transformed (reduce (fn [p form] (do
+                                       ; (println (pr-str "Transformed " (transform-expression form all-decl transform-env p true '())))
+                                       (transform-expression form all-decl transform-env p true '())
+                                       p)) prog forms)]
+    ; (println (pr-str "Transformed " @prog))
+    (reduce (fn [acc f]
+              (conj acc (try
+                          (println (pr-str "> " f))
+                          (println (meaning f env))
+                          ; (catch Exception e (println (str "Error: " e)))
+                          )))
+               '()
+               @prog)
+    ))
 
 (defn run-repl
   []

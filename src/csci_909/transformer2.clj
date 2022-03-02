@@ -1,9 +1,14 @@
-(ns csci-909.interpreterTc
-  (:use [csci-909.term])
+(ns csci-909.transformer2
   (:use [csci-909.util])
+  (:use [csci-909.term])
   (:use [csci-909.env])
-  (:use [csci-909.primitive])
-  (:use [csci-909.typeclassEnv]))
+  (:use [clojure.set])
+  (:use [csci-909.primitive]))
+
+(defn gen-inst-name
+  [tc-name t-name f-name]
+  (symbol (str "*" tc-name "-" t-name "-" f-name)))
+
 
 (def wrong '(wrong))
 
@@ -21,9 +26,9 @@
   [t env]
   (cond (primitive-type? t) t
         :else (let [t' (lookup-environment t env)]
-               (if (constructor? t')
-                 (nth t' 1)
-                 (throw (Exception. (str "Data type not found " t)))))))
+                (if (constructor? t')
+                  (nth t' 1)
+                  (throw (Exception. (str "Data type not found " t)))))))
 
 (defn create-overloaded-fn
   [f tc t env]
@@ -40,32 +45,32 @@
   [term env]
   ;; (println "") (println (pr-str "meanig " term " | env " (environment-keys env)))
   (cond
-    (const? term)        term
-    (data-inst? term)    term
-    (data-fn-inst? term) term
-    (variable? term) (lookup-environment term env)
-    (decl? term)     term
+    (const? term)        [term, term]
+    (data-inst? term)    [term, term]
+    (data-fn-inst? term) [term, term]
+    (variable? term) [(lookup-environment term env), term]
+    (decl? term)     [term, term]
     (lambda? term)   (let
                       [us (to-list (nth term 1))
                        e (nth term 2)]
-                       (make-closure e us env))
+                       [(make-closure e us env), term])
     (overload? term)     (do
                            (define-variable! (nth term 1) (make-overload (nth term 1)) env)
-                           (nth term 1))
+                           [(nth term 1), term])
     (let? term)      (let
                       [x  (nth term 1)
                        e  (nth term 2)
                        e' (nth term 3)]
-                       (meaning e' (extend-environment x (meaning e env) env)))
+                       [(first (meaning e' (extend-environment x (first (meaning e env)) env))), term])
     (prog-inst? term)   (let
                          [o (nth term 1)
                           e (nth term 3)
-                          me (meaning e env)]
+                          me (first (meaning e env))]
                           (if (func? me)
                             (do
                               (overload-variable! o term env)
-                              o)
-                            wrong))
+                              [o, term])
+                            [wrong, term]))
     (data? term)         (let [id   (nth term 1)
                                args (to-list (nth term 2))]
                            (define-variable! id (make-constructor id args) env)
@@ -78,31 +83,31 @@
                                    (symbol (str id "-" (first args')))
                                    (make-inst-accessor id (first args')) env)
                                  (recur (rest args')))))
-                           id)
+                           [id, term])
     (data-fn? term)      (let [id   (nth term 1)
                                args (to-list (nth term 2))]
                            (if (= 0 (count args))
                              (throw (Exception. "At least one type argument expected for the type " (str id)))
                              (do
                                (define-variable! id (make-fn-constructor id args) env)
-                               id)))
+                               [id, term])))
     (define? term)       (let [v (nth term 1)
-                               e (meaning (nth term 2) env)]
+                               e (first (meaning (nth term 2) env))]
                            (define-variable! v e env)
-                           v)
+                           [v, (make-define v e)])
     (if-expr? term)      (let [c (nth term 1)
                                t (nth term 2)
                                f (nth term 3)]
-                           (if (meaning c env)
-                             (meaning t env)
-                             (meaning f env)))
+                           (if (first (meaning c env))
+                             [(first (meaning t env)), term]
+                             [(first (meaning f env)), term]))
     (typeclass? term)    (if (= 0 (count (filter typeclass-def? (lookup-environment* (nth term 1) env))))
                            (do
                              (define-variable! (nth term 1) (make-typeclass-def (nth term 1) (nth term 2) (drop 3 term)) env)
                              (loop [fs (drop 3 term)]
                                (define-variable! (first (first fs)) (make-overload (first (first fs))) env)
                                (or (empty? (rest fs)) (recur (rest fs))))
-                             (nth term 1))
+                             [(nth term 1), term])
                            (throw (Exception. (str "A type class with the same name already exists. " (nth term 1)))))
     (typeclass-inst? term) (let [tc (lookup-environment (nth term 1) env)
                                  t  (lookup-type (nth term 2) env)
@@ -161,7 +166,7 @@
                                                        vs (map (fn [e'] (meaning e' env)) e's)]
                                                    (if (= 1 (count vs))
                                                      (if (= (get-inst-type (first vs)) t)
-                                                        (get (nth (first vs) 2) a)
+                                                       (get (nth (first vs) 2) a)
                                                        (throw (Exception. "Record accessor applied to invalid type.")))
                                                      (throw (Exception. "Record accessor applied to too many arguments."))))
                              (inst-predicate? mf) (let [t (nth mf 1)
@@ -172,4 +177,3 @@
                              :else (throw (Exception. (str "Function not found " (if (seq? term) (first term) nil))))))))
 
 (defn init-env [] (let [init-env (global-environment)] (extend-environment* primitives primitive-actions init-env)))
-

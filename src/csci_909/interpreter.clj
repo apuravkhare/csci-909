@@ -27,16 +27,6 @@
   [o env]
   (filter prog-inst? (lookup-environment* o env)))
 
-(defn get-inst-type
-  [v]
-  (cond (const? v)     (const-type v)
-        (data-inst? v) (nth v 1)
-        :else          wrong))
-
-(defn get-inst-type*
-  [vs]
-  (map get-inst-type vs))
-
 (defn apply-primitive
   [f args]
   (cond

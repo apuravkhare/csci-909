@@ -134,7 +134,7 @@
     theta))
 
 (defn judge-overloaded-call [gamma-dt gamma-con gamma-prim gamma-dec tc-insts exp type theta history constraints type-tc-map]
-  (println "overloaded " exp)
+  ; (println "overloaded " exp)
   (let [rator (first exp)
         theta-rator (lookup-environments (list gamma-dec gamma-con gamma-prim) rator)
         overloads (lookup-environment* rator tc-insts)
@@ -190,7 +190,7 @@
           (recur (rest decl-types) (rest actual-types) (cons (first decl-types) remapped))))))
 
 (defn judge-type-constructor [gamma-dt gamma-con gamma-prim gamma-dec tc-insts exp type theta history constraints type-tc-map]
-  (println (str "constructor " exp))
+  ; (println (str "constructor " exp))
   (let [rator (first exp)
         theta-rator (lookup-environment rator gamma-dt)
         rands (rest exp)
@@ -210,7 +210,7 @@
     type))
 
 (defn judge-type-call [gamma-dt gamma-con gamma-prim gamma-dec tc-insts exp type theta history constraints type-tc-map]
-  (println (str "call " exp))
+  ; (println (str "call " exp))
   (let [rator (first exp)
         theta-rator (lookup-environments (list gamma-dec gamma-con gamma-prim) rator)
         ; theta-rator (if (empty? constraints) theta-rator (reduce (fn [acc a] (find-replace a type acc)) theta-rator (map second constraints)))
@@ -235,7 +235,7 @@
               type))))
 
 (defn judge-inst-accessor [gamma-dt gamma-con gamma-prim gamma-dec tc-insts exp type theta history constraints type-tc-map]
-  (println (str "inst-accessor " exp))
+  ; (println (str "inst-accessor " exp))
   true)
 
 (defn judge-type-let [gamma-dt gamma-con gamma-prim gamma-dec tc-insts exp type theta history constraints type-tc-map]
@@ -253,7 +253,7 @@
 
 (defn judge-type [gamma-dt gamma-con gamma-prim gamma-dec tc-insts exp type theta history constraints type-tc-map]
   (let [new-history (extend-history history exp type)]
-    (println (str "judge " exp " " type))
+    ; (println (str "judge " exp " " type))
     (cond (boolean? exp)    (judge-type-boolean type theta new-history constraints gamma-dt gamma-prim type-tc-map)
           (integer? exp)    (judge-type-integer type theta new-history constraints gamma-dt gamma-prim type-tc-map)
           (double? exp)     (judge-type-double type theta new-history constraints gamma-dt gamma-prim type-tc-map)
@@ -308,7 +308,7 @@
         type-tc-map (nth lst 7)
         type-names (environment-keys gamma-dec)
         code-names (environment-keys code-defs)]
-    (println (pr-str "code defs " gamma-dec))
+    ; (println (pr-str "code defs " gamma-dec))
     (or (and (no-repeats? type-names)
              (no-repeats? code-names)
              (= (count type-names) (count code-names)))
@@ -328,5 +328,4 @@
               type (lookup-environment id gamma-dec)
               constraints (try-lookup-environment id constraint-decl)]
           (let [theta (check-expression gamma-dt gamma-tc gamma-prim gamma-dec tc-insts exp type constraints type-tc-map)]
-            (transform-expression exp)
             (recur (rest code-defs-keys))))))))

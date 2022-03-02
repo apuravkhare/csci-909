@@ -181,3 +181,13 @@
 (defn make-arrow-type [ts] (list 'arrowType ts))
 
 (defn make-forall-type [ids t] (list 'forall ids t)) ; new
+
+(defn get-inst-type
+  [v]
+  (cond (const? v)     (const-type v)
+        (data-inst? v) (nth v 1)
+        :else          (throw (Exception. (pr-str "Unknown type for input " v)))))
+
+(defn get-inst-type*
+  [vs]
+  (map get-inst-type vs))
