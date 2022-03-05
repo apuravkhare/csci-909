@@ -77,6 +77,8 @@
 ; (defn make-overload-inst [tc t f-name f dec-type] (list 'tc-inst tc t f-name f dec-type))
 (defn make-overload-inst [tc t f-name f] (list 'tc-inst tc t f-name f))
 
+(defn make-adt-constructor [k t args] (list 'adt-constructor k t args))
+
 ; boolean?, integer?, double?, string? are defined in clojure.core
 
 (defn lambda? [a] (and (tagged-list? a) (= (first a) 'lambda)))
@@ -109,6 +111,8 @@
       (string? a)))
 
 (defn data? [a] (and (tagged-list? a) (= (first a) 'data)))
+
+(defn data-new? [a] (and (tagged-list? a) (= (first a) 'data-new)))
 
 (defn data-fn? [a] (and (tagged-list? a) (= (first a) 'data-fn)))
 

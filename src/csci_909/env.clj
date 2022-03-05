@@ -144,3 +144,11 @@
     (if (empty-environment? (first pairs))
       ks
       (recur (rest pairs) (concat (first (first pairs)) ks)))))
+
+(defn environment-vals
+  [env]
+  (loop [pairs env
+         vs    '()]
+    (if (empty-environment? (first pairs))
+      vs
+      (recur (rest pairs) (concat (second (first pairs)) vs)))))

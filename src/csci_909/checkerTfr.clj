@@ -8,7 +8,7 @@
   (:use [csci-909.unification :only (unifyTerm4 unifyTerm5 failure extend-history theta-identity logic-variable? applyUnifier)]))
 
 (defn universalize-type [t]
-  (cond (vector? t) (seq t)
+  (cond (vector? t) t
         (seq? t)    t
         :else       t))
 
@@ -39,7 +39,7 @@
                             (if (= (count node) 4)
                               (extend-environment*
                                (map (fn [arg] (symbol (str (arg1 node) "-" arg))) (nth node 2))
-                               (map (fn [t] (list (arg1 node) t)) (arg3 node))
+                               (map (fn [t] [(arg1 node) t]) (arg3 node))
                                l4)
                               l4)
                             (extend-environment*
@@ -271,21 +271,173 @@
                               (and (in? (environment-keys gamma-dec) (first exp)) (inst-accessor? (lookup-environment (first exp) gamma-dec))) (judge-inst-accessor gamma-dt gamma-con gamma-prim gamma-dec tc-insts exp type theta new-history constraints type-tc-map)
 
                               :else (judge-type-call gamma-dt gamma-con gamma-prim gamma-dec tc-insts exp type theta new-history constraints type-tc-map)))))
+(defn defined-type?
+  [k gamma-dt gamma-tc type-tc-map]
+  (or ; (in? (environment-keys gamma-dt) k)
+      (in? (environment-vals type-tc-map) k)
+      (primitive-type? k)))
+
+(defn extract-type-constructor ; var | k | (k var)
+  [k gamma-dt gamma-tc type-tc-map]
+  (if (seq? k)
+    (if (defined-type? (first k) gamma-dt gamma-tc type-tc-map)
+      (first k)
+      (throw (Exception. (str "Invalid type declaration " k))))
+    (if (defined-type? k gamma-dt gamma-tc type-tc-map)
+      k
+      nil)))
+
+(defn extract-type-var ; var | k | (k var)
+  [k gamma-dt gamma-tc type-tc-map]
+  (if (seq? k)
+    (if (defined-type? (first k) gamma-dt gamma-tc type-tc-map)
+      (if (= (count k) 2)
+        (set (rest k))
+        (throw (Exception. (str "Invalid type declaration " k))))
+      (throw (Exception. (str "Invalid type declaration " k))))
+    (if (defined-type? k gamma-dt gamma-tc type-tc-map)
+      #{}
+      #{k})))
+
+(defn compare-types-2
+  [k1 k2 gamma-dt gamma-tc type-tc-map constraints] ; consider k1 <= k2 here
+  (if (empty? constraints)
+    (if (defined-type? k1 gamma-dt gamma-tc type-tc-map)
+      (if (defined-type? k2 gamma-dt gamma-tc type-tc-map)
+        (= k1 k2) ; k k
+        true) ; k a
+      (if (defined-type? k2 gamma-dt gamma-tc type-tc-map)
+        false ; a k
+        true)) ; a a
+    (if (defined-type? k1 gamma-dt gamma-tc type-tc-map)
+      (if (defined-type? k2 gamma-dt gamma-tc type-tc-map)
+        (= k1 k2) ; k k
+        (let [matched-constraint-names (map first (filter (fn [c] (= k2 (second c))) constraints))
+              matched-types            (lookup-environment* k1 type-tc-map)]
+          ; (println (str "Matched types " matched-types))
+          ; (println (pr-str "matched-constraint-names " matched-constraint-names))
+          (clojure.set/subset? (set matched-constraint-names) (set matched-types)))) ; k a
+      (if (defined-type? k2 gamma-dt gamma-tc type-tc-map)
+        (let [matched-constraint-names (map first (filter (fn [c] (= k1 (second c))) constraints))
+              matched-types            (lookup-environment* k2 type-tc-map)]
+          (clojure.set/subset? (set matched-constraint-names) (set matched-types))) ; a k
+        true)))) ; a a
+
+(defn compare-types
+  [decl-type actual-type gamma-dt gamma-tc gamma-prim tc-insts type-tc-map constraints]
+  (if (or (and (vector? decl-type) (= (count decl-type) 1))
+          (seq? decl-type)
+          (variable? decl-type))
+    (let [decl-k  (if (seq? decl-type) (first decl-type) decl-type)
+          actual-k (if (seq? actual-type) (first actual-type) actual-type)]
+      (if (or (compare-types-2 decl-k actual-k gamma-dt gamma-tc type-tc-map constraints)
+              (compare-types-2 actual-k decl-k gamma-dt gamma-tc type-tc-map constraints))
+        decl-type
+        (throw (Exception. (str "Type check failed " decl-type " - " actual-type " - " constraints)))))
+    (throw (Exception. (str "Invalid type comparison " decl-type " - " actual-type)))))
+
+(defn lookup-environment-type
+  [v gamma-dec gamma-dt gamma-tc gamma-prim tc-insts]
+  (cond (const? v)     (const-type v)
+        (variable? v)  (lookup-environment v gamma-dec)
+        (lambda? v)    (let [args (arg1 v)
+                             e    (arg2 v)]
+                         (cond (and (seq? e) (lambda? e)) (lookup-environment-type e gamma-dec gamma-dt gamma-tc gamma-prim tc-insts)
+                               (seq? e)           (lookup-environment-type (first e) gamma-dec gamma-dt gamma-tc gamma-prim tc-insts)
+                               :else              (lookup-environment-type e gamma-dec gamma-dt gamma-tc gamma-prim tc-insts)))
+        :else          (let [rator (first v)
+                             rands (rest v)]
+                         (cond (in? (environment-keys gamma-prim) rator) (last (lookup-environment rator gamma-prim))
+                               (in? (environment-keys gamma-dt) rator)   rator
+                               (in? (environment-keys tc-insts) rator)   (last (arg3 (lookup-environment rator gamma-tc)))
+                               (lambda? rator) (let [args (arg1 rator)
+                                                     e    (arg2 rator)]
+                                                 (lookup-environment-type e (extend-environment* args (map (fn [r] (lookup-environment-type r gamma-dec gamma-dt gamma-tc gamma-prim tc-insts)) rands) gamma-dec) gamma-dt gamma-tc gamma-prim tc-insts))
+                               :else (lookup-environment-type rator gamma-dec gamma-dt gamma-tc gamma-prim tc-insts)))))
+
+(defn check-type
+  [exp decl-type gamma-dec gamma-dt gamma-tc gamma-prim tc-insts type-tc-map constraints]
+  (println (str "Check type " exp " " decl-type))
+  (cond (boolean? exp) (compare-types 'boolean decl-type gamma-dt gamma-tc gamma-prim tc-insts type-tc-map constraints)
+        (integer? exp) (compare-types 'integer decl-type gamma-dt gamma-tc gamma-prim tc-insts type-tc-map constraints)
+        (double? exp)  (compare-types 'double decl-type gamma-dt gamma-tc gamma-prim tc-insts type-tc-map constraints)
+        (char? exp)    (compare-types 'char decl-type gamma-dt gamma-tc gamma-prim tc-insts type-tc-map constraints)
+        (string? exp)  (compare-types 'string decl-type gamma-dt gamma-tc gamma-prim tc-insts type-tc-map constraints)
+        (variable? exp) (compare-types (lookup-environment-type exp gamma-dec gamma-dt gamma-tc gamma-prim tc-insts) decl-type gamma-dt gamma-tc gamma-prim tc-insts type-tc-map constraints)
+        (lambda? exp)  (let [args (arg1 exp)
+                             e    (arg2 exp)]
+                         (if (vector? decl-type)
+                           (check-type e (last decl-type) (extend-environment* args (take (- (count decl-type) 1) decl-type) gamma-dec) gamma-dt gamma-tc gamma-prim tc-insts type-tc-map constraints)
+                           (check-type e decl-type gamma-dec gamma-dt gamma-tc gamma-prim tc-insts type-tc-map constraints)))
+        (let? exp)     (let [x  (arg1 exp)
+                             e  (arg2 exp)
+                             e' (arg3 exp)
+                             e-type (lookup-environment-type e gamma-dec gamma-dt gamma-tc gamma-prim tc-insts)]
+                         (check-type e' decl-type (extend-environment x e-type gamma-dec) gamma-dt gamma-tc gamma-prim tc-insts type-tc-map constraints)
+                         decl-type)
+        (define? exp)  (let [v (arg1 exp)
+                             e (arg2 exp)]
+                         (check-type e decl-type gamma-dec gamma-dt gamma-tc gamma-prim tc-insts type-tc-map constraints))
+        (if-expr? exp) (let [c (arg1 exp)
+                             t (arg2 exp)
+                             f (arg3 exp)]
+                         (check-type c 'boolean gamma-dec gamma-dt gamma-tc gamma-prim tc-insts type-tc-map constraints)
+                         (check-type t decl-type gamma-dec gamma-dt gamma-tc gamma-prim tc-insts type-tc-map constraints)
+                         (check-type f decl-type gamma-dec gamma-dt gamma-tc gamma-prim tc-insts type-tc-map constraints))
+        (inst-accessor? exp) decl-type
+        :else (let [rator (first exp)
+                    rands (rest exp)]
+                (cond (in? (environment-keys gamma-prim) rator) (let [prim-types (lookup-environment rator gamma-prim)]
+                                                                  (loop [rands      rands
+                                                                         rand-types (take (- (count prim-types) 1) prim-types)]
+                                                                    (if (empty? rands)
+                                                                      decl-type
+                                                                      (do
+                                                                        (check-type (first rands) (first rand-types) gamma-dec gamma-dt gamma-tc gamma-prim tc-insts type-tc-map constraints)
+                                                                        (recur (rest rands) (rest rand-types))))))
+                      (in? (environment-keys gamma-dt) rator) (let [arg-types (arg3 (lookup-environment rator gamma-dt))]
+                                                                (loop [rands      rands
+                                                                       rand-types (take (- (count arg-types) 1) arg-types)]
+                                                                  (if (empty? rands)
+                                                                    decl-type
+                                                                    (do
+                                                                      (check-type (first rands) (first rand-types) gamma-dec gamma-dt gamma-tc gamma-prim tc-insts type-tc-map constraints)
+                                                                      (recur (rest rands) (rest rand-types))))))
+                      (in? (environment-keys tc-insts) rator) (let [arg-types (arg3 (lookup-environment rator gamma-tc))]
+                                                                (loop [rands      rands
+                                                                       rand-types (take (- (count arg-types) 1) arg-types)]
+                                                                  (if (empty? rands)
+                                                                    decl-type
+                                                                    (do
+                                                                      (check-type (first rands) (first rand-types) gamma-dec gamma-dt gamma-tc gamma-prim tc-insts type-tc-map constraints)
+                                                                      (recur (rest rands) (rest rand-types))))))
+                      (lambda? rator) (let [args (arg1 exp)
+                                            e    (arg2 exp)]
+                                        (check-type e decl-type (extend-environment* args (map (fn [r] (lookup-environment-type  r gamma-dec gamma-dt gamma-tc gamma-prim tc-insts)) rands) gamma-dec) gamma-dt gamma-tc gamma-prim tc-insts type-tc-map constraints))
+                      :else (let [rand-types (lookup-environment rator gamma-dec)]
+                              (loop [rands      rands
+                                     rand-types (take (- (count rand-types) 1) rand-types)]
+                                (if (empty? rands)
+                                  decl-type
+                                  (do
+                                    (check-type (first rands) (first rand-types) gamma-dec gamma-dt gamma-tc gamma-prim tc-insts type-tc-map constraints)
+                                    (recur (rest rands) (rest rand-types))))))))))
 
 (defn no-repeats? [l] (= (count l) (count (set l))))
 
 ;;; interface to program representation
 
-(defn check-expression [gamma-dt gamma-con gamma-prim gamma-dec tc-insts exp type constraints type-tc-map]
+(defn check-expression [gamma-dt gamma-tc gamma-prim gamma-dec tc-insts exp type constraints type-tc-map]
   (let [simple-type (if (forall-type? type) (arg2 type) type)
-        history (extend-history '() exp type)
-        theta (judge-type gamma-dt gamma-con gamma-prim gamma-dec tc-insts exp simple-type theta-identity history constraints type-tc-map)]
+        ; history (extend-history '() exp type)
+        ; theta (judge-type gamma-dt gamma-con gamma-prim gamma-dec tc-insts exp simple-type theta-identity history constraints type-tc-map)
+        theta (check-type exp simple-type gamma-dec gamma-dt gamma-tc gamma-prim tc-insts type-tc-map constraints)]
     theta))
 
 (defn replace-typeclass-type
   [tc-fn t]
   (let [a (nth tc-fn 2)]
-    (find-replace a t (nth tc-fn 3))))
+    (vec (find-replace a t (nth tc-fn 3)))))
 
 (defn check-inst [gamma-dt gamma-tc gamma-prim gamma-dec tc-insts inst-name insts type-tc-map]
   (let [tc-fn (lookup-environment inst-name gamma-tc)]

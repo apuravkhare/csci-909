@@ -27,22 +27,24 @@
     all-decl (split-decl forms)
     type-check (try
                   (check-program-5tuple all-decl)
-                  (catch Exception e (println (str "Type check failed: " e))))
+                  ; (catch Exception e (println (str "Type check failed: " e)))
+                 )
     transform-env (init-env)
     prog (atom '())
-    transformed (reduce (fn [p form] (do
-                                       ; (println (pr-str "Transformed " (transform-expression form all-decl transform-env p true '())))
-                                       (transform-expression form all-decl transform-env p true '())
-                                       p)) prog forms)]
+    ; transformed (reduce (fn [p form] (do
+    ;                                    (transform-expression form all-decl transform-env p true '())
+    ;                                    p)) prog forms)
+    ]
     ; (println (pr-str "Transformed " @prog))
     (reduce (fn [acc f]
               (conj acc (try
-                          (println (pr-str "> " f))
+                          (println (str "> " (pr-str f)))
                           (println (meaning f env))
                           ; (catch Exception e (println (str "Error: " e)))
                           )))
                '()
-               @prog)
+               ; @prog
+            forms)
     ))
 
 (defn run-repl

@@ -71,30 +71,30 @@
 
 (def primitive-action-types
   (list 
-   (list 'integer 'integer 'integer)
-   (list 'integer 'integer 'integer)
-   (list 'integer 'integer 'integer)
-   (list 'integer 'integer 'integer)
-   (list 'integer 'integer 'boolean)
-   (list 'integer 'integer 'boolean)
-   (list 'integer 'integer 'boolean)
-   (list 'integer 'integer 'boolean)
-   (list 'integer 'integer 'boolean)
-   (list 'double 'double 'double)
-   (list 'double 'double 'double)
-   (list 'double 'double 'double)
-   (list 'double 'double 'double)
-   (list 'double 'double 'boolean)
-   (list 'double 'double 'boolean)
-   (list 'double 'double 'boolean)
-   (list 'double 'double 'boolean)
-   (list 'double 'double 'boolean)
-   (list 'string 'string 'string)
-   (list 'string 'string 'boolean)
-   (list 'boolean 'boolean)
-   (list 'boolean 'boolean 'boolean)
-   (list 'boolean 'boolean 'boolean)
-   (list 'integer 'string)
-   (list 'double 'string)
-   (list 'boolean 'boolean 'boolean)
-   (list 'boolean 'boolean 'boolean)))
+   ['integer 'integer 'integer]
+   ['integer 'integer 'integer]
+   ['integer 'integer 'integer]
+   ['integer 'integer 'integer]
+   ['integer 'integer 'boolean]
+   ['integer 'integer 'boolean]
+   ['integer 'integer 'boolean]
+   ['integer 'integer 'boolean]
+   ['integer 'integer 'boolean]
+   ['double 'double 'double]
+   ['double 'double 'double]
+   ['double 'double 'double]
+   ['double 'double 'double]
+   ['double 'double 'boolean]
+   ['double 'double 'boolean]
+   ['double 'double 'boolean]
+   ['double 'double 'boolean]
+   ['double 'double 'boolean]
+   ['string 'string 'string]
+   ['string 'string 'boolean]
+   ['boolean 'boolean]
+   ['boolean 'boolean 'boolean]
+   ['boolean 'boolean 'boolean]
+   ['integer 'string]
+   ['double 'string]
+   ['boolean 'boolean 'boolean]
+   ['boolean 'boolean 'boolean]))

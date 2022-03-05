@@ -111,6 +111,14 @@
                                (meaning (create-overloaded-fn (first fs) tc t env) env)
                                (or (empty? (rest fs)) (recur (rest fs))))
                              (nth term 2))
+    (data-new? term)     (let [dt-name (arg1 term)
+                               ks      (drop 2 term)]
+                           (loop [ks ks]
+                             (if (empty? ks)
+                               dt-name
+                               (do
+                                 (define-variable! (first (first ks)) (make-adt-constructor (first (first ks)) dt-name (seq (second ks))) env)
+                                 (recur (rest ks))))))
     ;;; everything else is function application
     :else                (let
                           [e  (nth term 0)

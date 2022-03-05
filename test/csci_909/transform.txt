@@ -4,10 +4,6 @@
 (type z integer)
 (define z (add 1 2))
 
-(+ 1 2)
-(+ 1.0 2.0)
-z
-
 (type pi double)
 (define pi 3.14)
 
@@ -16,6 +12,9 @@ z
 (type addPairs [(Pair a a) (Pair a a) (Pair a a)] [(Num a)])
 (define addPairs (lambda [p1 p2] (Pair (+ (Pair-x p1) (Pair-x p2)) (+ (Pair-y p1) (Pair-y p2)))))
 
+(+ 1 2)
+(+ 1.0 2.0)
+z
+
 (addPairs (Pair 1 2) (Pair 3 4))
 (addPairs (Pair 1 2.0) (Pair 3 4.0))
-
