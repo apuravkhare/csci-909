@@ -177,7 +177,7 @@
                                                     (if (= 1 (count vs))
                                                       (= (get-inst-type (first vs)) t)
                                                       (throw (Exception. "Record accessor applied to too many arguments."))))
-                             :else (throw (Exception. (str "Function not found " (if (seq? term) (first term) nil))))))))
+                             :else (throw (Exception. (pr-str "Function not found " (if (seq? term) (first term) nil))))))))
 
 (defn init-env [] (let [init-env (global-environment)] (extend-environment* primitives primitive-actions init-env)))
 

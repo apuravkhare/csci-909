@@ -35,7 +35,7 @@
     ;                                    (transform-expression form all-decl transform-env p true '())
     ;                                    p)) prog forms)
     ]
-    ; (println (pr-str "Transformed " @prog))
+    ; (println (pr-str "Transformed " type-check))
     (reduce (fn [acc f]
               (conj acc (try
                           (println (str "> " (pr-str f)))
@@ -44,7 +44,7 @@
                           )))
                '()
                ; @prog
-            forms)
+            type-check)
     ))
 
 (defn run-repl
