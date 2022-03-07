@@ -13,4 +13,6 @@
 (type fact [integer integer])
 (define fact (lambda [x] (if (== 0 x) 1 (* x (fact (- x 1))))))
 
-(fact 5)
+(type f integer)
+(define f (fact 5))
+f

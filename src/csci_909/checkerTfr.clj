@@ -557,10 +557,35 @@
                                                  (make-lambda ov-args (concat (list accessor-name) tr-rands))))
                       :else (let [f-def (lookup-environment rator code-defs)
                                   transformed (transform-exp (concat (list f-def) rands) (lookup-environment rator gamma-dec) gamma-dec gamma-dt gamma-tc gamma-prim tc-insts type-tc-map code-defs)]
-                              (println (pr-str "transformed " transformed))
-                              (if (or (not (every? overloaded-arg? (rest transformed))) (= exp transformed))
-                                exp
-                                (concat (list (concat (list rator) (rest transformed))) rands)))))))
+                              ; (println (pr-str "transformed " transformed))
+                              (if (every? overloaded-arg? (rest transformed))
+                                (concat (list (concat (list rator) (rest transformed))) rands)
+                                (if (= exp transformed)
+                                  exp
+                                  (let [arg-types (lookup-environment-type rator gamma-dec gamma-dt gamma-tc gamma-prim tc-insts)
+                                        [tr-rands ov-args] (transform-rands rands arg-types gamma-dec gamma-dt gamma-tc gamma-prim tc-insts type-tc-map code-defs)]
+                                    (if (empty? ov-args)
+                                      ; exp
+                                      (concat (list rator) tr-rands)
+                                      (make-lambda ov-args (concat (list rator) tr-rands))))))
+                              ; (if (or (not (every? overloaded-arg? (rest transformed))) (= exp transformed))
+                              ;   exp
+                              ;   (concat (list (concat (list rator) (rest transformed))) rands))
+                              )))))
+
+(defn transform-rec-call
+  [exp f-name args]
+  (cond (seq? exp) (if (= (first exp) f-name)
+                     (concat (list (concat (list f-name) args)) (map (fn [a] (transform-rec-call a f-name args)) (rest exp)))
+                     (map (fn [a] (transform-rec-call a f-name args)) exp))
+        :else exp))
+
+(defn transform-rec-call2
+  [id exp]
+  (let [args (collect-overloaded-args exp)]
+    (if (empty? args)
+      exp
+      (transform-rec-call exp id args))))
 
 (defn check-type
   [exp decl-type gamma-dec gamma-dt gamma-tc gamma-prim tc-insts type-tc-map constraints]
@@ -692,7 +717,8 @@
               exp  (lookup-environment id code-defs)
               type (lookup-environment id gamma-dec)
               constraints (try-lookup-environment id constraint-decl)
-              theta (check-expression gamma-dt gamma-tc gamma-prim gamma-dec tc-insts exp type constraints type-tc-map code-defs')]
+              theta (check-expression gamma-dt gamma-tc gamma-prim gamma-dec tc-insts exp type constraints type-tc-map code-defs')
+              theta (transform-rec-call2 id theta)]
             (recur (rest code-defs-keys)
                    (if (inst-accessor? theta) transformed-code' (cons (make-define id theta) transformed-code'))
                    (extend-environment id theta code-defs'))))))))
