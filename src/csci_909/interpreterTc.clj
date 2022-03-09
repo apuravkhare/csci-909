@@ -111,8 +111,9 @@
                                (meaning (create-overloaded-fn (first fs) tc t env) env)
                                (or (empty? (rest fs)) (recur (rest fs))))
                              (nth term 2))
-    (data-new? term)     (let [dt-name (arg1 term)
-                               ks      (drop 2 term)]
+    (data-new? term)     (let [dt-name   (if (seq? (arg1 term)) (first (arg1 term)) (arg1 term))
+                               type-vars (if (seq? (arg1 term)) (rest (arg1 term)) '())
+                               ks        (drop 2 term)]
                            (loop [ks ks]
                              (if (empty? ks)
                                dt-name

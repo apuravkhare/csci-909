@@ -363,25 +363,25 @@
                                :else (lookup-environment-type rator gamma-dec gamma-dt gamma-tc gamma-prim tc-insts)))))
 
 (defn try-lookup-environment-type
-  [v gamma-dec gamma-dt gamma-tc gamma-prim tc-insts]
+  [v decl-type gamma-dec gamma-dt gamma-tc gamma-prim tc-insts]
   (cond (const? v)     (const-type v)
-        (variable? v)  (if (in? (environment-keys gamma-dec) v) (lookup-environment v gamma-dec) nil)
+        (variable? v)  (if (in? (environment-keys gamma-dec) v) (lookup-environment v gamma-dec) decl-type)
         (lambda? v)    (let [args (arg1 v)
                              e    (arg2 v)]
-                         (cond (and (seq? e) (lambda? e)) (lookup-environment-type e gamma-dec gamma-dt gamma-tc gamma-prim tc-insts)
-                               (seq? e)           (lookup-environment-type (first e) gamma-dec gamma-dt gamma-tc gamma-prim tc-insts)
-                               :else              (lookup-environment-type e gamma-dec gamma-dt gamma-tc gamma-prim tc-insts)))
+                         (cond (and (seq? e) (lambda? e)) (try-lookup-environment-type e decl-type gamma-dec gamma-dt gamma-tc gamma-prim tc-insts)
+                               (seq? e)           (try-lookup-environment-type (first e) decl-type gamma-dec gamma-dt gamma-tc gamma-prim tc-insts)
+                               :else              (try-lookup-environment-type e decl-type gamma-dec gamma-dt gamma-tc gamma-prim tc-insts)))
         :else          (let [rator (first v)
                              rands (rest v)]
                          (cond (in? (environment-keys gamma-prim) rator) (last (lookup-environment rator gamma-prim))
                                (in? (environment-keys gamma-dt) rator)   (let [rator-def (lookup-environment rator gamma-dt)
                                                                                rator-ts  (arg3 rator-def)]
-                                                                           (concat (list rator) (map (fn [r] (try-lookup-environment-type r gamma-dec gamma-dt gamma-tc gamma-prim tc-insts)) rands)))
+                                                                           (concat (list rator) (map (fn [r] (try-lookup-environment-type r decl-type gamma-dec gamma-dt gamma-tc gamma-prim tc-insts)) rands)))
                                (in? (environment-keys tc-insts) rator)   (last (arg3 (lookup-environment rator gamma-tc)))
                                (lambda? rator) (let [args (arg1 rator)
                                                      e    (arg2 rator)]
-                                                 (lookup-environment-type e (extend-environment* args (map (fn [r] (lookup-environment-type r gamma-dec gamma-dt gamma-tc gamma-prim tc-insts)) rands) gamma-dec) gamma-dt gamma-tc gamma-prim tc-insts))
-                               :else (lookup-environment-type rator gamma-dec gamma-dt gamma-tc gamma-prim tc-insts)))))
+                                                 (try-lookup-environment-type e decl-type (extend-environment* args (map (fn [r] (try-lookup-environment-type r decl-type gamma-dec gamma-dt gamma-tc gamma-prim tc-insts)) rands) gamma-dec) gamma-dt gamma-tc gamma-prim tc-insts))
+                               :else (try-lookup-environment-type rator decl-type gamma-dec gamma-dt gamma-tc gamma-prim tc-insts)))))
 
 (defn transform-call-tc-inst
   [exp decl-type]
@@ -443,7 +443,7 @@
       (if (seq? (first actual-type))
         (gen-overloaded-func-name rator (nth (first actual-type) (.indexOf (first matching-types) type)))
         (gen-overloaded-func-name rator (first actual-type)))
-      (throw (Exception. (pr-str "Invalid call to function " rator "(" rand-arg-types ")"))))))
+      (throw (Exception. (pr-str "Invalid call to function " rator "(" rand-actual-types ")"))))))
 
 (defn transform-exp
   [exp decl-type gamma-dec gamma-dt gamma-tc gamma-prim tc-insts type-tc-map code-defs]
@@ -452,7 +452,8 @@
         (variable? exp) exp
         (lambda? exp)   (let [args    (arg1 exp)
                               e       (arg2 exp)
-                              e-type (lookup-environment-type e gamma-dec gamma-dt gamma-tc gamma-prim tc-insts)
+                              e-type  (if (vector? decl-type) (last decl-type) decl-type)
+                              e-type  (try-lookup-environment-type e e-type gamma-dec gamma-dt gamma-tc gamma-prim tc-insts)
                               e'      (transform-exp e e-type gamma-dec gamma-dt gamma-tc gamma-prim tc-insts type-tc-map code-defs)
                               ov-args (unique (concat (collect-overloaded-args e') (collect-overloaded-args e)))]
                           (println (pr-str "transformed " e'))
@@ -519,7 +520,7 @@
                                             ; e-type (lookup-environment-type e gamma-dec gamma-dt gamma-tc gamma-prim tc-insts)
                                             e-type decl-type]
                                         (if (every? overloaded-arg? args)
-                                          (let [rand-types (map (fn [r] (try-lookup-environment-type r gamma-dec gamma-dt gamma-tc gamma-prim tc-insts)) rands)]
+                                          (let [rand-types (map (fn [r] (try-lookup-environment-type r decl-type gamma-dec gamma-dt gamma-tc gamma-prim tc-insts)) rands)]
                                             (if (some nil? rand-types)
                                               (let [[tr-rands ov-args] (transform-rands rands (take (- (count e-type) 1) e-type) gamma-dec gamma-dt gamma-tc gamma-prim tc-insts type-tc-map code-defs)]
                                                    (if (empty? ov-args)

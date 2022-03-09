@@ -4,11 +4,18 @@
 (type square-sum [a a a] [(Num a)])
 (define square-sum (lambda [x y] (* (+ x y) (+ x y))))
 
-(square-sum 2 3)
-(square-sum 2.0 3.0)
+
+;; (square-sum 2 3)
+;; (square-sum 2.0 3.0)
 
 (type fact2 [a a a a] [(Num a) (Eq a)])
 (define fact2 (lambda [x zero one] (if (== zero x) one (* x (fact2 (- x one) zero one)))))
 
-(fact2 5 0 1)
-(fact2 5.0 0.0 1.0)
+(type f1 integer)
+(define f1 (fact2 5 0 1))
+
+(type f2 double)
+(define f2 (fact2 5.0 0.0 1.0))
+
+f1
+f2

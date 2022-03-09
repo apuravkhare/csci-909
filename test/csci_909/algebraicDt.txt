@@ -1,4 +1,4 @@
-(data-new Maybe (Just [x] [a]) (Nothing))
+(data-new (Maybe a) (Just [x] [a]) (Nothing))
 
 (define hasValue (lambda [v] (match
                                (Just? v)    true
