@@ -1,6 +1,6 @@
-(data Pair [x y] [a b])
+(record Pair [x y] [a b])
 
-(data Point [x y] [integer integer])
+(record Point [x y] [integer integer])
 
 (type p (Pair a a) [(Num a)])
 (define p (Pair 1 2))

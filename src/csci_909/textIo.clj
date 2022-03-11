@@ -25,17 +25,11 @@
    [forms    (concat typeclassEnv (read-forms filepath))
     env      (init-env)
     all-decl (split-decl forms)
-    type-check (try
-                  (check-program-5tuple all-decl)
-                  ; (catch Exception e (println (str "Type check failed: " e)))
-                 )
-    transform-env (init-env)
-    prog (atom '())
-    ; transformed (reduce (fn [p form] (do
-    ;                                    (transform-expression form all-decl transform-env p true '())
-    ;                                    p)) prog forms)
+    ; type-check (try
+    ;               (check-program-5tuple all-decl)
+    ;               ; (catch Exception e (println (str "Type check failed: " e)))
+    ;              )
     ]
-    ; (println (pr-str "Transformed " type-check))
     (reduce (fn [acc f]
               (conj acc (try
                           (println (str "> " (pr-str f)))
@@ -44,7 +38,7 @@
                           )))
                '()
                ; @prog
-            type-check)
+            forms)
     ))
 
 (defn run-repl

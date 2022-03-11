@@ -1,0 +1,11 @@
+(data (List a) (Cons [i c] [a (List a)]) (Empty))
+
+(Empty)
+(Cons 1 (Cons 2 (Empty)))
+
+(define length (lambda [l] (cond
+                             (Cons? l) (+ 1 (length (Cons-c l)))
+                             (Empty? l) 0)))
+
+(length (Empty))
+(length (Cons 1 (Cons 2 (Empty))))

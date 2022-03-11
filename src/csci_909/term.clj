@@ -23,7 +23,7 @@
 
 (defn make-data
   [k args ts]
-  (list 'data k args ts))
+  (list 'record k args ts))
 
 (defn make-data-inst
   [k args]
@@ -53,6 +53,10 @@
 (defn make-inst-predicate
   [t]
   (list 'inst-predicate t))
+
+(defn make-adt-inst-predicate
+  [k t]
+  (list 'inst-predicate k t))
 
 (defn make-primitive-action
   [p a]
@@ -110,9 +114,9 @@
       (char? a)
       (string? a)))
 
-(defn data? [a] (and (tagged-list? a) (= (first a) 'data)))
+(defn data? [a] (and (tagged-list? a) (= (first a) 'record)))
 
-(defn data-new? [a] (and (tagged-list? a) (= (first a) 'data-new)))
+(defn data-adt? [a] (and (tagged-list? a) (= (first a) 'data)))
 
 (defn data-fn? [a] (and (tagged-list? a) (= (first a) 'data-fn)))
 
@@ -142,13 +146,15 @@
         (char? v)    'char
         (string? v)  'string))
 
-(defn forall-type? [a] (and (seq? a) (not (empty? a)) (= (first a) 'forall)))
+(defn forall-type? [a] (and (tagged-list? a) (= (first a) 'forall)))
 
-(defn type-decl? [a] (and (seq? a) (not (empty? a)) (= (first a) 'type)))
+(defn type-decl? [a] (and (tagged-list? a) (= (first a) 'type)))
 
-(defn lambda1? [a] (and (seq? a) (not (empty? a)) (= (first a) 'lambda1)))
+(defn lambda1? [a] (and (tagged-list? a) (= (first a) 'lambda1)))
 
 (defn decl? [a] (or (type-decl? a)))
+
+(defn cond? [a] (and (tagged-list? a) (= (first a) 'cond)))
 
 ; selectors
 

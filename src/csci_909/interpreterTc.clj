@@ -111,15 +111,31 @@
                                (meaning (create-overloaded-fn (first fs) tc t env) env)
                                (or (empty? (rest fs)) (recur (rest fs))))
                              (nth term 2))
-    (data-new? term)     (let [dt-name   (if (seq? (arg1 term)) (first (arg1 term)) (arg1 term))
-                               type-vars (if (seq? (arg1 term)) (rest (arg1 term)) '())
+    (data-adt? term)     (let [dt-name   (if (seq? (arg1 term)) (first (arg1 term)) (arg1 term))
+                               ; type-vars (if (seq? (arg1 term)) (rest (arg1 term)) '())
                                ks        (drop 2 term)]
                            (loop [ks ks]
                              (if (empty? ks)
                                dt-name
                                (do
-                                 (define-variable! (first (first ks)) (make-adt-constructor (first (first ks)) dt-name (seq (second ks))) env)
+                                 (define-variable! (first (first ks)) (make-constructor (first (first ks)) (second (first ks))) env)
+                                 (define-variable! (symbol (str (first (first ks)) "?")) (make-inst-predicate (first (first ks))) env)
+                                 (loop [args' (second (first ks))]
+                                   (if (empty? args')
+                                     true
+                                     (do
+                                       (define-variable!
+                                         (symbol (str (first (first ks)) "-" (first args')))
+                                         (make-inst-accessor (first (first ks)) (first args')) env)
+                                       (recur (rest args')))))
                                  (recur (rest ks))))))
+    (cond? term)           (let [cases (rest term)]
+                             (if (= (mod (count cases) 2) 0)
+                               (loop [cases cases]
+                                 (if (meaning (first cases) env)
+                                   (meaning (second cases) env)
+                                   (recur (rest (rest cases)))))
+                               (throw (Exception. (str "Even number of arguments expected in cond ")))))
     ;;; everything else is function application
     :else                (let
                           [e  (nth term 0)

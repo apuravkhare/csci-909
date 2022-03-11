@@ -1,0 +1,12 @@
+(data (Maybe a) (Just [x] [a]) (Nothing))
+
+(define hasValue (lambda [v] (cond
+                               (Just? v)    true
+                               (Nothing? v) false)))
+
+(Just 1)
+(Nothing)
+
+(hasValue (Just 1))
+(hasValue (Nothing))
+
