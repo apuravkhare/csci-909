@@ -1,12 +1,20 @@
 (data (Maybe a) (Just [x] [a]) (Nothing))
 
+(type hasValue [(Maybe a) boolean])
 (define hasValue (lambda [v] (cond
                                (Just? v)    true
                                (Nothing? v) false)))
 
-(Just 1)
-(Nothing)
+(type j (Maybe a))
+(define j (Just 1))
 
-(hasValue (Just 1))
-(hasValue (Nothing))
+(type n (Maybe a))
+(define n (Nothing))
 
+(type h1 boolean)
+(define h1 (hasValue (Just 1)))
+
+(type h2 boolean)
+(define h2 (hasValue (Nothing)))
+
+h2

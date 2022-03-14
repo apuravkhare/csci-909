@@ -35,7 +35,7 @@
                  (if (= var (first keys))
                    (first vals)
                    (recur (rest keys) (rest vals)))))]
-        (if res res (recur (rest pairs)))))))
+        (if (not (nil? res)) res (recur (rest pairs)))))))
 
 (defn try-lookup-environment
   "finds the first occurrence of the key in the environment.
@@ -52,7 +52,7 @@
                  (if (= var (first keys))
                    (first vals)
                    (recur (rest keys) (rest vals)))))]
-        (if res res (recur (rest pairs)))))))
+        (if (not (nil? res)) res (recur (rest pairs)))))))
 
 (defn lookup-environment*
   "finds all instances of the key in the environment."
@@ -89,8 +89,8 @@
                 (if (= var (first keys))
                   (first vals)
                   (recur (rest keys) (rest vals)))))]
-        (if res res (recur (rest pairs))))))]
-     (if res' res' (recur (rest envs)))))))
+        (if (not (nil? res)) res (recur (rest pairs))))))]
+     (if (not (nil? res')) res' (recur (rest envs)))))))
 
 (defn define-variable!
   "add a variable definition to the topmost environment/redefine if one already exists."
@@ -113,7 +113,7 @@
                       (.set vals index val)
                       env)
                     (recur (rest keys) (rest vals) (+ index 1)))))]
-        (if res res (recur (rest pairs)))))))
+        (if (not (nil? res)) res (recur (rest pairs)))))))
 
 (defn define-variable*!
   [vars vals env]

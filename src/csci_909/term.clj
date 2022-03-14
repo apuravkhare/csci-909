@@ -78,10 +78,12 @@
 
 (defn make-define [v e] (list 'define v e))
 
+(defn make-cond [cs] (concat (list 'cond) cs))
+
 ; (defn make-overload-inst [tc t f-name f dec-type] (list 'tc-inst tc t f-name f dec-type))
 (defn make-overload-inst [tc t f-name f] (list 'tc-inst tc t f-name f))
 
-(defn make-adt-constructor [k t args] (list 'adt-constructor k t args))
+(defn make-adt-constructor [k t args ts] (list 'adt-constructor k t args ts))
 
 ; boolean?, integer?, double?, string? are defined in clojure.core
 
@@ -117,6 +119,8 @@
 (defn data? [a] (and (tagged-list? a) (= (first a) 'record)))
 
 (defn data-adt? [a] (and (tagged-list? a) (= (first a) 'data)))
+
+(defn data-adt-constructor? [a] (and (tagged-list? a) (= (first a) 'adt-constructor)))
 
 (defn data-fn? [a] (and (tagged-list? a) (= (first a) 'data-fn)))
 

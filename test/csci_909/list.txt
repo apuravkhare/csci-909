@@ -1,11 +1,20 @@
 (data (List a) (Cons [i c] [a (List a)]) (Empty))
 
-(Empty)
-(Cons 1 (Cons 2 (Empty)))
+(type e (List a))
+(define e (Empty))
 
+(type l (List a))
+(define l (Cons 1 (Cons 2 (Empty))))
+
+(type length [(List a) integer])
 (define length (lambda [l] (cond
                              (Cons? l) (+ 1 (length (Cons-c l)))
                              (Empty? l) 0)))
 
-(length (Empty))
-(length (Cons 1 (Cons 2 (Empty))))
+;(type l0 integer)
+;(define l0 (length (Empty)))
+
+(type l2 integer)
+(define l2 (length (Cons 1 (Cons 2 (Empty)))))
+
+l2

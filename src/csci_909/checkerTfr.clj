@@ -27,9 +27,10 @@
          l7 (global-environment) ; type constraints
          l8 (global-environment) ; type to type class map
          l9 '() ; unbound vars
+         l10 '() ; all data declarations
          ] 
     (if (empty? children)
-      (list l1 l2 init-type-env l4 l5 l6 l7 l8 l9)
+      (list l1 l2 init-type-env l4 l5 l6 l7 l8 l9 l10)
       (let [node (first children)]
         (cond (data? node) (recur
                             (rest children)
@@ -49,7 +50,51 @@
                              (map (fn [arg] (make-inst-accessor (arg1 node) arg)) (nth node 2))
                              ; (extend-environment (arg1 node) node l5)
                              l5)
-                            l6 l7 l8 l9)
+                            l6 l7 l8 l9
+                            (cons node l10))
+              (data-adt? node) (let [dt-name (if (seq? (arg1 node)) (first (arg1 node)) (arg1 node))
+                                      type-vars (if (seq? (arg1 node)) (rest (arg1 node)) '())
+                                      ks      (drop 2 node)]
+                                 (println (pr-str "ks " ks))
+                                  (recur
+                                   (rest children)
+                                   (extend-environment*
+                                    (map first ks)
+                                    (map (fn [k] (make-adt-constructor
+                                                  (first k)
+                                                  dt-name
+                                                  (if (= (count k) 2) (universalize-type (nth k 1)) '())
+                                                  (if (= (count k) 3) (universalize-type (nth k 2)) '()))) ks)
+                                    (extend-environment dt-name (make-data dt-name type-vars type-vars) l1))
+                                   l2
+                                   (loop [ks ks
+                                          l4 (extend-environment*
+                                              (map (fn [k] (symbol (str (first k) "?"))) ks)
+                                              (map (fn [k] [(first k) 'boolean]) ks)
+                                              l4)]
+                                     (if (empty? ks)
+                                       l4
+                                       (recur (rest ks) (if (= (count (first ks)) 3)
+                                                          (extend-environment*
+                                                           (map (fn [arg] (symbol (str (first (first ks)) "-" arg))) (nth (first ks) 1))
+                                                           (map (fn [t] [(first (first ks)) t]) (nth (first ks) 2))
+                                                           l4)
+                                                          l4))))
+                                   (loop [ks ks
+                                          l5 (extend-environment*
+                                              (map (fn [k] (symbol (str (first k) "?"))) ks)
+                                              (map (fn [k] (make-inst-predicate (first k))) ks)
+                                              l5)]
+                                     (if (empty? ks)
+                                       l5
+                                       (recur (rest ks) (if (= (count (first ks)) 3)
+                                                          (extend-environment*
+                                                           (map (fn [arg] (symbol (str (first (first ks)) "-" arg))) (nth (first ks) 1))
+                                                           (map (fn [arg] (make-inst-accessor (first (first ks)) arg)) (nth (first ks) 1))
+                                                           l5)
+                                                          l5))))
+                                   l6 l7 l8 l9
+                                   (cons node l10)))
               (type-decl? node) (recur
                                  (rest children)
                                  l1
@@ -61,12 +106,12 @@
                                    (extend-environment (arg1 node) (universalize-type (arg3 node)) l7)
                                    l7)
                                  l8
-                                 l9)
+                                 l9 l10)
               (define? node) (recur
                                 (rest children)
                                 l1 l2 l4
                                 (extend-environment (arg1 node) (arg2 node) l5)
-                                l6 l7 l8 l9)
+                                l6 l7 l8 l9 l10)
               (typeclass? node) (let [tc (nth node 1)
                                       a (nth node 2)
                                       fs (drop 3 node)]
@@ -74,7 +119,7 @@
                                    (rest children)
                                    l1
                                    (extend-environment* (map first fs) (map (fn [f] (make-overload-type tc a (universalize-type (second f)))) fs) l2)
-                                   l4 l5 l6 l7 l8 l9))
+                                   l4 l5 l6 l7 l8 l9 l10))
               (typeclass-inst? node) (let [tc-name (nth node 1)
                                            ; tc (lookup-environment tc-name l2)
                                            t (nth node 2)
@@ -90,8 +135,8 @@
                                                                           (make-lambda (nth f 1) (nth f 2))))
                                               fs)
                                          l6) l7
-                                        (extend-environment t tc-name l8) l9))
-              :else (recur (rest children) l1 l2 l4 l5 l6 l7 l8 (cons node l9)))))))
+                                        (extend-environment t tc-name l8) l9 l10))
+              :else (recur (rest children) l1 l2 l4 l5 l6 l7 l8 (cons node l9) l10))))))
 
 ;;;;; type checker
 
@@ -355,7 +400,9 @@
         :else          (let [rator (first v)
                              rands (rest v)]
                          (cond (in? (environment-keys gamma-prim) rator) (last (lookup-environment rator gamma-prim))
-                               (in? (environment-keys gamma-dt) rator)   rator
+                               (in? (environment-keys gamma-dt) rator)   (let [rator-def (lookup-environment rator gamma-dt)
+                                                                               rator-type-name (if (data-adt-constructor? rator-def) (arg2 rator-def) rator)]
+                                                                           rator-type-name)
                                (in? (environment-keys tc-insts) rator)   (last (arg3 (lookup-environment rator gamma-tc)))
                                (lambda? rator) (let [args (arg1 rator)
                                                      e    (arg2 rator)]
@@ -375,8 +422,15 @@
                              rands (rest v)]
                          (cond (in? (environment-keys gamma-prim) rator) (last (lookup-environment rator gamma-prim))
                                (in? (environment-keys gamma-dt) rator)   (let [rator-def (lookup-environment rator gamma-dt)
-                                                                               rator-ts  (arg3 rator-def)]
-                                                                           (concat (list rator) (map (fn [r] (try-lookup-environment-type r decl-type gamma-dec gamma-dt gamma-tc gamma-prim tc-insts)) rands)))
+                                                                               rator-type-name (if (data-adt-constructor? rator-def) (arg2 rator-def) rator)]
+                                                                           (if (data-adt-constructor? rator-def)
+                                                                             (let [adt-type (lookup-environment rator-type-name gamma-dt)
+                                                                                   rator-ts  (arg4 rator-def)
+                                                                                   rator-ts-rands (map vector rator-ts rands)
+                                                                                   rand-ts (map (fn [[t r]] (try-lookup-environment-type r t gamma-dec gamma-dt gamma-tc gamma-prim tc-insts)) rator-ts-rands)
+                                                                                   mapped-ts (zipmap rator-ts rand-ts)]
+                                                                               (concat (list rator-type-name) (map (fn [t] (if (nil? (get mapped-ts t)) t (get mapped-ts t))) (arg3 adt-type))))
+                                                                             (concat (list rator-type-name) (map (fn [r] (try-lookup-environment-type r decl-type gamma-dec gamma-dt gamma-tc gamma-prim tc-insts)) rands))))
                                (in? (environment-keys tc-insts) rator)   (last (arg3 (lookup-environment rator gamma-tc)))
                                (lambda? rator) (let [args (arg1 rator)
                                                      e    (arg2 rator)]
@@ -437,13 +491,22 @@
   (let [matching (filter (fn [[arg-type rand]] (if (seq? arg-type) (in? arg-type type) (= type arg-type))) rand-arg-types)
         matching-types (map first matching)
         matching-args (map second matching)
-        actual-type (unique (map second (filter (fn [[rand type]] (in? matching-args rand)) rand-actual-types)))]
-    ; (println (pr-str "actual-type " actual-type " i " matching-args))
-    (if (= (count actual-type) 1)
-      (if (seq? (first actual-type))
-        (gen-overloaded-func-name rator (nth (first actual-type) (.indexOf (first matching-types) type)))
-        (gen-overloaded-func-name rator (first actual-type)))
-      (throw (Exception. (pr-str "Invalid call to function " rator "(" rand-actual-types ")"))))))
+        actual-type (unique (map second (filter (fn [[rand type]] (in? matching-args rand)) rand-actual-types)))
+        matching-actual (unique (map second (filter (fn [[rand arg-type]] (if (seq? arg-type) (in? arg-type type) (= type arg-type))) rand-actual-types)))]
+    (println (pr-str "rand-arg-types " rand-arg-types " rand-actual-types " rand-actual-types))
+    (println (pr-str "matching " matching " actual-type " actual-type))
+    (println (pr-str "type " type " actual-type " actual-type))
+    (println (pr-str "matching-actual " matching-actual))
+    (cond
+      (= (count actual-type) 1) (if (seq? (first actual-type))
+                                  (gen-overloaded-func-name rator (nth (first actual-type) (.indexOf (first matching-types) type)))
+                                  (gen-overloaded-func-name rator (first actual-type)))
+      (= (count matching-actual) 1) (gen-overloaded-func-name rator type)
+      :else (throw (Exception. (pr-str "Invalid call to function " rator "(" rand-actual-types ")"))))))
+
+; ([(List a) (Cons 1 (Cons 2 (Empty)))])
+; ([(Cons 1 (Cons 2 (Empty))) (List integer)])
+; (define fact (lambda [-:integer *:integer ==:integer] (lambda [x] (if (==:integer 0 x) 1 (*:integer x ((fact -:integer *:integer ==:integer) (-:integer x 1)))))))
 
 (defn transform-exp
   [exp decl-type gamma-dec gamma-dt gamma-tc gamma-prim tc-insts type-tc-map code-defs]
@@ -491,7 +554,25 @@
                           (if (empty? ov-args)
                             exp
                             (make-lambda ov-args (make-if-expr c t f))))
+        (cond? exp)      (loop [cases    (rest exp)
+                                tr-cases '()
+                                ov-args-all '()]
+                           (if (empty? cases)
+                             (if (empty? ov-args-all)
+                               exp
+                               (make-lambda ov-args-all (make-cond tr-cases)))
+                             (let [c (transform-exp (first cases) 'boolean gamma-dec gamma-dt gamma-tc gamma-prim tc-insts type-tc-map code-defs)
+                                   e (transform-exp (second cases) decl-type gamma-dec gamma-dt gamma-tc gamma-prim tc-insts type-tc-map code-defs)
+                                   c-ov-args  (collect-overloaded-args c)
+                                   c (if (empty? c-ov-args) c (arg2 c))
+                                   e-ov-args  (collect-overloaded-args e)
+                                   e (if (empty? e-ov-args) e (arg2 e))
+                                   ov-args (clojure.set/union (set c-ov-args) (set e-ov-args))]
+                               (recur (rest (rest cases))
+                                      (concat tr-cases (list c e))
+                                      (unique (concat ov-args-all ov-args))))))
         (inst-accessor? exp) exp
+        (inst-predicate? exp) exp
         :else (let [rator (first exp)
                     rands (rest exp)]
                 (cond (in? (environment-keys gamma-prim) rator)
@@ -556,6 +637,13 @@
                                                  ; exp
                                                  (concat (list accessor-name) tr-rands)
                                                  (make-lambda ov-args (concat (list accessor-name) tr-rands))))
+                      (inst-predicate? rator) (let [pred-name (symbol (str (arg1 rator) "?"))
+                                                    arg-types (lookup-environment pred-name gamma-dec)
+                                                    [tr-rands ov-args] (transform-rands rands (take (- (count arg-types) 1) arg-types) gamma-dec gamma-dt gamma-tc gamma-prim tc-insts type-tc-map code-defs)]
+                                                (if (empty? ov-args)
+                                                 ; exp
+                                                  (concat (list pred-name) tr-rands)
+                                                  (make-lambda ov-args (concat (list pred-name) tr-rands))))
                       :else (let [f-def (lookup-environment rator code-defs)
                                   transformed (transform-exp (concat (list f-def) rands) (lookup-environment rator gamma-dec) gamma-dec gamma-dt gamma-tc gamma-prim tc-insts type-tc-map code-defs)]
                               ; (println (pr-str "transformed " transformed))
@@ -617,7 +705,18 @@
                          (check-type c 'boolean gamma-dec gamma-dt gamma-tc gamma-prim tc-insts type-tc-map constraints)
                          (check-type t decl-type gamma-dec gamma-dt gamma-tc gamma-prim tc-insts type-tc-map constraints)
                          (check-type f decl-type gamma-dec gamma-dt gamma-tc gamma-prim tc-insts type-tc-map constraints))
+        (cond? exp)    (let [cases (rest exp)]
+                         (if (= (mod (count cases) 2) 0)
+                           (loop [cases cases]
+                             (if (empty? cases)
+                               decl-type
+                              (do
+                                (check-type (first cases) 'boolean gamma-dec gamma-dt gamma-tc gamma-prim tc-insts type-tc-map constraints)
+                                (check-type (second cases) decl-type gamma-dec gamma-dt gamma-tc gamma-prim tc-insts type-tc-map constraints)
+                                (recur (rest (rest cases))))))
+                           (throw (Exception. (str "Even number of arguments expected in cond ")))))
         (inst-accessor? exp) decl-type
+        (inst-predicate? exp) decl-type
         :else (let [rator (first exp)
                     rands (rest exp)]
                 (cond (in? (environment-keys gamma-prim) rator) (let [prim-types (lookup-environment rator gamma-prim)]
@@ -697,6 +796,7 @@
         constraint-decl (nth lst 6)
         type-tc-map (nth lst 7)
         unbound-vars (nth lst 8)
+        data-defs    (nth lst 9)
         type-names (environment-keys gamma-dec)
         code-names (environment-keys code-defs)]
     (or (and (no-repeats? type-names)
@@ -713,7 +813,7 @@
            transformed-code' transformed-code
            code-defs' code-defs]
       (if (empty? code-defs-keys)
-        (concat (environment-vals gamma-dt) (reverse transformed-code') (reverse unbound-vars))
+        (concat (reverse data-defs) (reverse transformed-code') (reverse unbound-vars))
         (let [id   (first code-defs-keys)
               exp  (lookup-environment id code-defs)
               type (lookup-environment id gamma-dec)
@@ -721,5 +821,5 @@
               theta (check-expression gamma-dt gamma-tc gamma-prim gamma-dec tc-insts exp type constraints type-tc-map code-defs')
               theta (transform-rec-call2 id theta)]
             (recur (rest code-defs-keys)
-                   (if (inst-accessor? theta) transformed-code' (cons (make-define id theta) transformed-code'))
+                   (if (or (inst-accessor? theta) (inst-predicate? theta)) transformed-code' (cons (make-define id theta) transformed-code'))
                    (extend-environment id theta code-defs'))))))))

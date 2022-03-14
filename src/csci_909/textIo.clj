@@ -25,10 +25,10 @@
    [forms    (concat typeclassEnv (read-forms filepath))
     env      (init-env)
     all-decl (split-decl forms)
-    ; type-check (try
-    ;               (check-program-5tuple all-decl)
-    ;               ; (catch Exception e (println (str "Type check failed: " e)))
-    ;              )
+    type-check (try
+                  (check-program-5tuple all-decl)
+                  ; (catch Exception e (println (str "Type check failed: " e)))
+                 )
     ]
     (reduce (fn [acc f]
               (conj acc (try
@@ -38,7 +38,7 @@
                           )))
                '()
                ; @prog
-            forms)
+            type-check)
     ))
 
 (defn run-repl

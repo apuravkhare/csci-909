@@ -1,0 +1,6 @@
+(data MPoly
+ (Const [c] [float])
+ (ProdPlus [p1 x p2] [MPoly string MPoly]))
+
+(typeclass-inst Num MPoly
+ (+ ))
