@@ -1,9 +1,10 @@
 (ns csci-909.textIo
   ;; (:use [csci-909.interpreter])
   (:use [csci-909.interpreterTc])
-  (:use [csci-909.checkerTfr])
+  (:use [csci-909.checkerTfrOpt])
   (:use [csci-909.typeclassEnv])
-  (:use [csci-909.transformer]))
+  (:use [csci-909.transformer])
+  (:use [csci-909.term]))
 
 (import java.io.PushbackReader)
 (require '[clojure.edn :as edn])
@@ -25,15 +26,22 @@
    [forms    (concat typeclassEnv (read-forms filepath))
     env      (init-env)
     all-decl (split-decl forms)
+    ; type-check (try
+    ;               (check-program-5tuple all-decl)
+    ;               (catch Exception e (println (str "Type check failed: " e))))
     type-check (try
-                  (check-program-5tuple all-decl)
-                  ; (catch Exception e (println (str "Type check failed: " e)))
+                 (check-and-transform-code all-decl forms)
+                 ; (catch Exception e (println (str "Type check failed: " e)))
                  )
     ]
+    ; (println (pr-str type-check))
     (reduce (fn [acc f]
               (conj acc (try
                           (println (str "> " (pr-str f)))
-                          (println (meaning f env))
+                          (let [m (meaning f env)]
+                           (if (func? m)
+                             (println 'closure)
+                             (println m)))
                           ; (catch Exception e (println (str "Error: " e)))
                           )))
                '()

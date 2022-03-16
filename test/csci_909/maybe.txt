@@ -11,10 +11,6 @@
 (type n (Maybe a))
 (define n (Nothing))
 
-(type h1 boolean)
-(define h1 (hasValue (Just 1)))
+(hasValue (Just 1))
 
-(type h2 boolean)
-(define h2 (hasValue (Nothing)))
-
-h2
+(hasValue (Nothing))

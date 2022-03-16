@@ -11,10 +11,11 @@
                              (Cons? l) (+ 1 (length (Cons-c l)))
                              (Empty? l) 0)))
 
-;(type l0 integer)
-;(define l0 (length (Empty)))
+(type sum [(List a) a] [(Num a)])
+(define sum (lambda [l] (cond
+                          (Cons? l) (+ (Cons-i l) (sum (Cons-c l)))
+                          (Empty? l) 0)))
 
-(type l2 integer)
-(define l2 (length (Cons 1 (Cons 2 (Empty)))))
-
-l2
+(length (Cons 1 (Cons 2 (Empty))))
+(sum (Cons 1 (Cons 2 (Empty))))
+(sum (Cons 1.0 (Cons 2.0 (Empty))))

@@ -1,0 +1,7 @@
+(record Pair [x y] [a b])
+(type addPairs [(Pair a b) (Pair a b) (Pair a b)] [(Num a) (Num b)])
+(define addPairs (lambda [p1 p2] (Pair (+ (Pair-x p1) (Pair-x p2)) (+ (Pair-y p1) (Pair-y p2)))))
+
+(addPairs (Pair 1 2) (Pair 3 4))
+
+(addPairs (Pair 1 2.0) (Pair 3 4.0))

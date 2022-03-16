@@ -1,6 +1,40 @@
 (data MPoly
- (Const [c] [float])
+ (Const [c] [double])
  (ProdPlus [p1 x p2] [MPoly string MPoly]))
 
+(type scale [double MPoly MPoly])
+(define scale (lambda [a p]
+ (cond (Const? p)    (Const (* a (Const-c p)))
+       (ProdPlus? p) (ProdPlus (scale a (ProdPlus-p1 p)) (ProdPlus-x p) (scale a (ProdPlus-p2 p))))))
+
+(scale 2.0 (ProdPlus (Const 1.0) "x" (Const 2.0)))
+
+(type normalPoly [MPoly string MPoly MPoly])
+(define normalPoly (lambda [p1 x p2]
+ (if (Const? p1)
+     p2
+     (ProdPlus p1 x p2))))
+
+(type addPolynomials [MPoly MPoly MPoly])
+(define addPolynomials (lambda [p1 p2]
+ (cond (*prim-and (Const? p1) (Const? p2)) (Const (+ (Const-c p1) (Const-c p2)))
+       (*prim-and (ProdPlus? p1) (Const? p2)) (ProdPlus (ProdPlus-p1 p1) (ProdPlus-x p1) (addPolynomials p2 (ProdPlus-p2 p1)))
+       (*prim-and (Const? p1) (ProdPlus? p2)) (ProdPlus (ProdPlus-p1 p2) (ProdPlus-x p2) (addPolynomials p1 (ProdPlus-p2 p2)))
+       (*prim-and (ProdPlus? p1) (ProdPlus? p2)) (normalPoly (addPolynomials (ProdPlus-p1 p1) (ProdPlus-p1 p2)) (ProdPlus-x p1) (addPolynomials (ProdPlus-p2 p1) (ProdPlus-p2 p2))))))
+
+(addPolynomials (Const 1.0) (Const 2.0))
+(addPolynomials (Const 1.0) (ProdPlus (Const 1.0) "x" (Const 2.0)))
+
 (typeclass-inst Num MPoly
- (+ ))
+ (+ [p1 p2] (cond (*prim-and (Const? p1) (Const? p2)) (Const (+ (Const-c p1) (Const-c p2)))
+                  (*prim-and (ProdPlus? p1) (Const? p2)) (ProdPlus (ProdPlus-p1 p1) (ProdPlus-x p1) (+ p2 (ProdPlus-p2 p1)))
+                  (*prim-and (Const? p1) (ProdPlus? p2)) (ProdPlus (ProdPlus-p1 p2) (ProdPlus-x p2) (+ p1 (ProdPlus-p2 p2)))
+                  (*prim-and (ProdPlus? p1) (ProdPlus? p2)) (normalPoly (+ (ProdPlus-p1 p1) (ProdPlus-p1 p2)) (ProdPlus-x p1) (+ (ProdPlus-p2 p1) (ProdPlus-p2 p2)))))
+ (- [p1 p2] p1)
+ (* [p1 p2] p1)
+ (neg [p] (scale -1.0 p)))
+
+(type addPoly2 [MPoly MPoly MPoly])
+(define addPoly2 (lambda [p1 p2] (+ p1 p2)))
+
+(addPoly2 (Const 1.0) (Const 2.0))

@@ -38,7 +38,7 @@
 
 (defn meaning
   [term env]
-  ;; (println "") (println (pr-str "meanig " term " | env " (environment-keys env)))
+  (println "") (println (pr-str "meanig " term " | env "  (environment-keys env)))
   (cond
     (const? term)        term
     (data-inst? term)    term
@@ -116,7 +116,9 @@
                                ks        (drop 2 term)]
                            (loop [ks ks]
                              (if (empty? ks)
-                               dt-name
+                               (do
+                                 (define-variable! dt-name (make-constructor '() '()) env)
+                                 dt-name)
                                (do
                                  (define-variable! (first (first ks)) (make-constructor (first (first ks)) (second (first ks))) env)
                                  (define-variable! (symbol (str (first (first ks)) "?")) (make-inst-predicate (first (first ks))) env)
@@ -148,8 +150,12 @@
                              (func? mf) (let [args (to-list (nth mf 2))
                                               exp (nth mf 1)
                                               vs (map (fn [e'] (meaning e' env)) e's)
-                                              f-env (nth mf 3)]
-                                          (meaning exp (extend-environment* args vs f-env)))
+                                              f-env (nth mf 3)
+                                              me (meaning exp (extend-environment* args vs f-env))]
+                                            (if (lambda? me)
+                                             (do (println "func " (arg1 mf) " args " (arg2 mf))
+                                                 (meaning (concat (list me) args) env))
+                                              me))
                              (data-fn-inst? mf) (let [k (lookup-environment (nth mf 1) env)
                                                       ip (nth k 2)
                                                       l (nth mf 2)
