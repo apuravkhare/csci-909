@@ -324,11 +324,13 @@
     (println (pr-str "rand-arg-types " rand-arg-types " rand-actual-types " rand-actual-types))
     (println (pr-str "matching " matching " actual-type " actual-type))
     (println (pr-str "type " type " actual-type " actual-type))
-    (println (pr-str "matching-actual " matching-actual))
+    (println (pr-str "matching-types " matching-types))
     (cond
       ; (> (count matching-actual) 0) (gen-overloaded-func-name rator type)
       (= (count actual-type) 1) (if (seq? (first actual-type))
-                                  (gen-overloaded-func-name rator (nth (first actual-type) (.indexOf (first matching-types) type)))
+                                  (if (seq? (first matching-types))
+                                   (gen-overloaded-func-name rator (nth (first actual-type) (.indexOf (first matching-types) type)))
+                                    (gen-overloaded-func-name rator type))
                                   (gen-overloaded-func-name rator (first actual-type)))
       (= (count matching-actual) 1) (gen-overloaded-func-name rator type)
       ; :else (throw (Exception. (pr-str "Invalid call to function " rator "(" rand-actual-types ")")))
@@ -441,9 +443,15 @@
                                                                     new-rator (gen-tc-inst-arg-name rator decl-type)
                                                                     [tr-rands ov-args] (transform-rands rands (take (- (count arg-types) 1) arg-types) gamma-dec gamma-dt gamma-tc gamma-prim tc-insts type-tc-map code-defs sub-fs)
                                                                     ov-args (vec (unique (cons new-rator ov-args)))
-                                                                    tr (make-lambda ov-args (concat (list new-rator) tr-rands))]
-                                                                ; (println (pr-str "tr " tr))
-                                                                tr)
+                                                                    tr (make-lambda ov-args (concat (list new-rator) tr-rands))
+                                                                    rand-ts (map (fn [r] (try (lookup-environment-type r gamma-dec gamma-dt gamma-tc gamma-prim tc-insts) (catch Exception _ nil))) tr-rands)]
+                                                                ; (println (pr-str "ov-args " ov-args))
+                                                                
+                                                                (if (every? (fn [r] (and (not (nil? r)) (not (vector? r)) (= (count (unique rand-ts)) 1))) rand-ts)
+                                                                  (transform-exp (concat (list (gen-overloaded-func-name rator (first rand-ts))) rands) decl-type gamma-dec gamma-dt gamma-tc gamma-prim tc-insts type-tc-map code-defs sub-fs)
+                                                                 tr)
+                                                                ; tr
+                                                                )
                       (lambda? rator) (let [args (arg1 rator)
                                             ; e    (arg2 exp)
                                             ; e-type (lookup-environment-type e gamma-dec gamma-dt gamma-tc gamma-prim tc-insts)
@@ -645,11 +653,12 @@
         dec-type (replace-typeclass-type tc-fn t)
         new-name (gen-overloaded-func-name inst-name t)
         lambda-form (make-lambda (arg1 inst) (arg2 inst))
-        mod-exp (make-define new-name lambda-form)
-        theta (check-expression gamma-dt gamma-tc gamma-prim gamma-dec tc-insts mod-exp dec-type nil type-tc-map code-defs sub-fs)
-        theta (make-define new-name (transform-rec-call2 new-name (arg2 theta)))
+        ; mod-exp (make-define new-name lambda-form)
+        theta (check-expression gamma-dt gamma-tc gamma-prim gamma-dec tc-insts lambda-form dec-type nil type-tc-map code-defs sub-fs)
+        theta (make-define new-name (transform-rec-call2 new-name theta))
+        ; no (println (pr-str "theta " theta))
         ]
-    theta))
+    [theta, dec-type]))
 
 (defn check-and-transform-code
   [lst forms]
@@ -679,34 +688,38 @@
       (loop [forms forms
              transformed-code' (vec transformed-code)
              sub-fs-keys '()
-             code-defs' code-defs]
+             code-defs' code-defs
+             gamma-dec' gamma-dec]
         (if (empty? forms)
           transformed-code'
           (let [form (first forms)]
-            ; (println (str "transform " form))
-            (cond (or (const? form) (variable? form) (overload? form) (prog-inst? form) (data? form) (data-fn? form) (data-adt? form)) (recur (rest forms) (conj transformed-code' form) sub-fs-keys code-defs')
-              (or (type-decl? form) (typeclass? form)) (recur (rest forms) transformed-code' sub-fs-keys code-defs')
-                  (typeclass-inst? form) (recur (rest forms)
-                                                (vec (concat transformed-code' (map (fn [inst] (check-inst2 gamma-dt gamma-tc gamma-prim gamma-dec tc-insts (first inst) inst type-tc-map code-defs' sub-fs (arg2 form))) (drop 3 form))))
+            (println (str "transform " form))
+            (cond (or (const? form) (variable? form) (overload? form) (prog-inst? form) (data? form) (data-fn? form) (data-adt? form)) (recur (rest forms) (conj transformed-code' form) sub-fs-keys code-defs' gamma-dec')
+              (or (type-decl? form) (typeclass? form)) (recur (rest forms) transformed-code' sub-fs-keys code-defs' gamma-dec')
+                  (typeclass-inst? form) (let [tr-insts (map (fn [inst] (check-inst2 gamma-dt gamma-tc gamma-prim gamma-dec' tc-insts (first inst) inst type-tc-map code-defs' sub-fs (arg2 form))) (drop 3 form))]
+                                          (recur (rest forms)
+                                                (vec (concat transformed-code' (map first tr-insts)))
                                                 (vec (environment-keys sub-fs))
-                                                code-defs')
+                                                (extend-environment* (map arg1 (map first tr-insts)) (map arg2 (map first tr-insts)) code-defs')
+                                                 (extend-environment* (map arg1 (map first tr-insts)) (map second tr-insts) gamma-dec')))
                   (define? form)   (let [id (arg1 form)
                                          exp  (lookup-environment id code-defs')
-                                         type (if (in? (environment-keys gamma-dec) id) (lookup-environment id gamma-dec) (gen-type-var))
+                                         type (if (in? (environment-keys gamma-dec') id) (lookup-environment id gamma-dec') (gen-type-var))
                                          constraints (try-lookup-environment id constraint-decl)
-                                         transformed (check-expression gamma-dt gamma-tc gamma-prim gamma-dec tc-insts exp type constraints type-tc-map code-defs' sub-fs)
+                                         transformed (check-expression gamma-dt gamma-tc gamma-prim gamma-dec' tc-insts exp type constraints type-tc-map code-defs' sub-fs)
                                          transformed (transform-rec-call2 id transformed)]
                                      (recur (rest forms)
                                             (conj (vec (concat transformed-code'
                                                                (map (fn [sf] (lookup-environment sf sub-fs)) (filter (fn [sf] (not (in? sub-fs-keys sf))) (environment-keys sub-fs)))))
                                                   (make-define id transformed))
                                             (vec (environment-keys sub-fs))
-                                            (extend-environment id transformed code-defs')))
-                  :else            (let [transformed (check-expression gamma-dt gamma-tc gamma-prim gamma-dec tc-insts form (gen-type-var) nil type-tc-map code-defs' sub-fs)]
+                                            (extend-environment id transformed code-defs')
+                                            gamma-dec'))
+                  :else            (let [transformed (check-expression gamma-dt gamma-tc gamma-prim gamma-dec' tc-insts form (gen-type-var) nil type-tc-map code-defs' sub-fs)]
                                      (recur (rest forms)
                                             (conj (vec (concat transformed-code'
                                                                (map (fn [sf] (lookup-environment sf sub-fs)) (filter (fn [sf] (not (in? sub-fs-keys sf))) (environment-keys sub-fs)))))
                                                   transformed)
                                             (vec (environment-keys sub-fs))
-                                            code-defs')))))))))
+                                            code-defs' gamma-dec')))))))))
 

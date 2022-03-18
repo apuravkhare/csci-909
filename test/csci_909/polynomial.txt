@@ -34,7 +34,4 @@
  (* [p1 p2] p1)
  (neg [p] (scale -1.0 p)))
 
-(type addPoly2 [MPoly MPoly MPoly])
-(define addPoly2 (lambda [p1 p2] (+ p1 p2)))
-
-(addPoly2 (Const 1.0) (Const 2.0))
+(+ (Const 1.0) (Const 2.0))
