@@ -26,12 +26,11 @@
 (addPolynomials (Const 1.0) (ProdPlus (Const 1.0) "x" (Const 2.0)))
 
 (typeclass-inst Num MPoly
- (+ [p1 p2] (cond (*prim-and (Const? p1) (Const? p2)) (Const (+ (Const-c p1) (Const-c p2)))
-                  (*prim-and (ProdPlus? p1) (Const? p2)) (ProdPlus (ProdPlus-p1 p1) (ProdPlus-x p1) (+ p2 (ProdPlus-p2 p1)))
-                  (*prim-and (Const? p1) (ProdPlus? p2)) (ProdPlus (ProdPlus-p1 p2) (ProdPlus-x p2) (+ p1 (ProdPlus-p2 p2)))
-                  (*prim-and (ProdPlus? p1) (ProdPlus? p2)) (normalPoly (+ (ProdPlus-p1 p1) (ProdPlus-p1 p2)) (ProdPlus-x p1) (+ (ProdPlus-p2 p1) (ProdPlus-p2 p2)))))
+ (+ [p1 p2] (addPolynomials p1 p2))
  (- [p1 p2] p1)
  (* [p1 p2] p1)
  (neg [p] (scale -1.0 p)))
 
 (+ (Const 1.0) (Const 2.0))
+(+ (Const 1.0) (ProdPlus (Const 1.0) "x" (Const 2.0)))
+(+ (ProdPlus (Const 1.0) "x" (Const 2.0)) (ProdPlus (Const 1.0) "x" (Const 2.0)))

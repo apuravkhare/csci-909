@@ -5,7 +5,7 @@
                                (Just? v)    true
                                (Nothing? v) false)))
 
-(type j (Maybe a))
+(type j (Maybe integer))
 (define j (Just 1))
 
 (type n (Maybe a))

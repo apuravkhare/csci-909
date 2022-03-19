@@ -235,7 +235,7 @@
 (defn try-lookup-environment-type
   [v decl-type gamma-dec gamma-dt gamma-tc gamma-prim tc-insts]
   (cond (const? v)     (const-type v)
-        (variable? v)  (if (in? (environment-keys gamma-dec) v) (lookup-environment v gamma-dec) decl-type)
+        (variable? v)  (if (in? (environment-keys gamma-dec) v) (lookup-environment v gamma-dec) nil)
         (lambda? v)    (let [args (arg1 v)
                              e    (arg2 v)]
                          (cond (and (seq? e) (lambda? e)) (try-lookup-environment-type e decl-type gamma-dec gamma-dt gamma-tc gamma-prim tc-insts)
@@ -291,9 +291,11 @@
    [(read-string (subs (str arg) 0 colon-index)) (read-string (subs (str arg) (+ colon-index 1)))])) ; [func type]
 
 (defn collect-overloaded-args
-  [exp]
+  [exp code-defs]
   (cond (lambda? exp) (let [args (arg1 exp)]
                         (vec (unique (filter overloaded-arg? args))))
+        (and (seq? exp)
+             (in? (environment-keys code-defs) (first exp))) (collect-overloaded-args (lookup-environment (first exp) code-defs) code-defs)
         :else         '()))
 
 (declare transform-exp)
@@ -308,7 +310,7 @@
     (if (empty? rands)
       [(reverse tr-rands) (reverse ov-args-all)]
       (let [tr-rand (transform-exp (first rands) (first rand-types) gamma-dec gamma-dt gamma-tc gamma-prim tc-insts type-tc-map code-defs sub-fs)
-            ov-args (collect-overloaded-args tr-rand)]
+            ov-args (collect-overloaded-args tr-rand code-defs)]
         (if (empty? ov-args)
           (recur (rest rands) (rest rand-types) (cons tr-rand tr-rands) ov-args-all)
           (recur (rest rands) (rest rand-types) (cons (arg2 tr-rand) tr-rands) (concat ov-args ov-args-all)))))))
@@ -360,7 +362,7 @@
 
 (defn transform-exp
   [exp decl-type gamma-dec gamma-dt gamma-tc gamma-prim tc-insts type-tc-map code-defs sub-fs]
-  ; (println (pr-str "Transform exp " exp " Type " decl-type))
+  (println (pr-str "Transform exp " exp " Type " decl-type))
   (cond (const? exp)    exp
         (variable? exp) exp
         (lambda? exp)   (let [args    (arg1 exp)
@@ -368,7 +370,7 @@
                               e-type  (if (vector? decl-type) (last decl-type) decl-type)
                               e-type  (try-lookup-environment-type e e-type gamma-dec gamma-dt gamma-tc gamma-prim tc-insts)
                               e'      (transform-exp e e-type gamma-dec gamma-dt gamma-tc gamma-prim tc-insts type-tc-map code-defs sub-fs)
-                              ov-args (unique (concat (collect-overloaded-args e') (collect-overloaded-args e)))]
+                              ov-args (unique (concat (collect-overloaded-args e' code-defs) (collect-overloaded-args e code-defs)))]
                           ; (println (pr-str "transformed " e'))
                           (if (empty? ov-args)
                             exp
@@ -376,9 +378,9 @@
         (let? exp)      (let [x  (arg1 exp)
                               e  (arg2 exp)
                               e' (arg3 exp)
-                              e-ov-args  (collect-overloaded-args e)
+                              e-ov-args  (collect-overloaded-args e code-defs)
                               e (if (empty? e-ov-args) e (arg2 e))
-                              e'-ov-args (collect-overloaded-args e')
+                              e'-ov-args (collect-overloaded-args e' code-defs)
                               e' (if (empty? e'-ov-args) e' (arg2 e'))
                               ov-args (vec (clojure.set/union (set e-ov-args) (set e'-ov-args)))]
                           (if (empty? ov-args)
@@ -386,7 +388,7 @@
                             (make-lambda ov-args (make-let x e e'))))
         (define? exp)   (let [v (arg1 exp)
                               e (arg2 exp)
-                              ov-args (collect-overloaded-args e)]
+                              ov-args (collect-overloaded-args e code-defs)]
                           (make-define v (transform-exp e decl-type gamma-dec gamma-dt gamma-tc gamma-prim tc-insts type-tc-map code-defs sub-fs)))
                           ; (if (empty? ov-args)
                           ;   exp
@@ -394,11 +396,11 @@
         (if-expr? exp)  (let [c (transform-exp (arg1 exp) decl-type gamma-dec gamma-dt gamma-tc gamma-prim tc-insts type-tc-map code-defs sub-fs)
                               t (transform-exp (arg2 exp) decl-type gamma-dec gamma-dt gamma-tc gamma-prim tc-insts type-tc-map code-defs sub-fs)
                               f (transform-exp (arg3 exp) decl-type gamma-dec gamma-dt gamma-tc gamma-prim tc-insts type-tc-map code-defs sub-fs)
-                              c-ov-args  (collect-overloaded-args c)
+                              c-ov-args  (collect-overloaded-args c code-defs)
                               c (if (empty? c-ov-args) c (arg2 c))
-                              t-ov-args  (collect-overloaded-args t)
+                              t-ov-args  (collect-overloaded-args t code-defs)
                               t (if (empty? t-ov-args) t (arg2 t))
-                              f-ov-args  (collect-overloaded-args f)
+                              f-ov-args  (collect-overloaded-args f code-defs)
                               f (if (empty? f-ov-args) f (arg2 f))
                               ov-args (vec (clojure.set/union (set c-ov-args) (set t-ov-args) (set f-ov-args)))]
                           (if (empty? ov-args)
@@ -413,9 +415,9 @@
                                (make-lambda ov-args-all (make-cond tr-cases)))
                              (let [c (transform-exp (first cases) 'boolean gamma-dec gamma-dt gamma-tc gamma-prim tc-insts type-tc-map code-defs sub-fs)
                                    e (transform-exp (second cases) decl-type gamma-dec gamma-dt gamma-tc gamma-prim tc-insts type-tc-map code-defs sub-fs)
-                                   c-ov-args  (collect-overloaded-args c)
+                                   c-ov-args  (collect-overloaded-args c code-defs)
                                    c (if (empty? c-ov-args) c (arg2 c))
-                                   e-ov-args  (collect-overloaded-args e)
+                                   e-ov-args  (collect-overloaded-args e code-defs)
                                    e (if (empty? e-ov-args) e (arg2 e))
                                    ov-args (clojure.set/union (set c-ov-args) (set e-ov-args))]
                                (recur (rest (rest cases))
@@ -530,8 +532,8 @@
         :else exp))
 
 (defn transform-rec-call2
-  [id exp]
-  (let [args (collect-overloaded-args exp)]
+  [id exp code-defs]
+  (let [args (collect-overloaded-args exp code-defs)]
     (if (empty? args)
       exp
       (transform-rec-call exp id args))))
@@ -645,7 +647,7 @@
               new-name (gen-overloaded-func-name (arg3 inst) (arg2 inst))
               mod-exp (make-define new-name (arg4 inst))
               theta (check-expression gamma-dt gamma-tc gamma-prim gamma-dec tc-insts mod-exp dec-type nil type-tc-map code-defs sub-fs)
-              theta (transform-rec-call2 (arg3 inst) (arg2 theta))]
+              theta (transform-rec-call2 (arg3 inst) (arg2 theta) code-defs)]
           (recur (rest insts) (cons (make-define new-name theta) transformed-insts)))))))
 
 (defn check-inst2 [gamma-dt gamma-tc gamma-prim gamma-dec tc-insts inst-name inst type-tc-map code-defs sub-fs t]
@@ -655,7 +657,7 @@
         lambda-form (make-lambda (arg1 inst) (arg2 inst))
         ; mod-exp (make-define new-name lambda-form)
         theta (check-expression gamma-dt gamma-tc gamma-prim gamma-dec tc-insts lambda-form dec-type nil type-tc-map code-defs sub-fs)
-        theta (make-define new-name (transform-rec-call2 new-name theta))
+        theta (make-define new-name (transform-rec-call2 new-name theta code-defs))
         ; no (println (pr-str "theta " theta))
         ]
     [theta, dec-type]))
@@ -707,7 +709,7 @@
                                          type (if (in? (environment-keys gamma-dec') id) (lookup-environment id gamma-dec') (gen-type-var))
                                          constraints (try-lookup-environment id constraint-decl)
                                          transformed (check-expression gamma-dt gamma-tc gamma-prim gamma-dec' tc-insts exp type constraints type-tc-map code-defs' sub-fs)
-                                         transformed (transform-rec-call2 id transformed)]
+                                         transformed (transform-rec-call2 id transformed code-defs')]
                                      (recur (rest forms)
                                             (conj (vec (concat transformed-code'
                                                                (map (fn [sf] (lookup-environment sf sub-fs)) (filter (fn [sf] (not (in? sub-fs-keys sf))) (environment-keys sub-fs)))))
