@@ -170,6 +170,11 @@
       #{}
       #{k})))
 
+(defn replace-typeclass-type
+  [tc-fn t]
+  (let [a (nth tc-fn 2)]
+    (vec (find-replace a t (nth tc-fn 3)))))
+
 (defn compare-types-2
   [k1 k2 gamma-dt gamma-tc type-tc-map constraints] ; consider k1 <= k2 here
   (if (empty? constraints)
@@ -262,7 +267,7 @@
                                (lambda? rator) (let [args (arg1 rator)
                                                      e    (arg2 rator)]
                                                  (try-lookup-environment-type e decl-type (extend-environment* args (map (fn [r] (try-lookup-environment-type r decl-type gamma-dec gamma-dt gamma-tc gamma-prim tc-insts)) rands) gamma-dec) gamma-dt gamma-tc gamma-prim tc-insts))
-                               :else (try-lookup-environment-type rator decl-type gamma-dec gamma-dt gamma-tc gamma-prim tc-insts)))))
+                               :else (if (seq? (try-lookup-environment-type rator decl-type gamma-dec gamma-dt gamma-tc gamma-prim tc-insts)) (last (try-lookup-environment-type rator decl-type gamma-dec gamma-dt gamma-tc gamma-prim tc-insts)) (try-lookup-environment-type rator decl-type gamma-dec gamma-dt gamma-tc gamma-prim tc-insts))))))
 
 (defn transform-call-tc-inst
   [exp decl-type]
@@ -296,6 +301,8 @@
                         (vec (unique (filter overloaded-arg? args))))
         (and (seq? exp)
              (in? (environment-keys code-defs) (first exp))) (collect-overloaded-args (lookup-environment (first exp) code-defs) code-defs)
+        (and (variable? exp)
+             (in? (environment-keys code-defs) exp)) (collect-overloaded-args (lookup-environment exp code-defs) code-defs)
         :else         '()))
 
 (declare transform-exp)
@@ -316,18 +323,19 @@
           (recur (rest rands) (rest rand-types) (cons (arg2 tr-rand) tr-rands) (concat ov-args ov-args-all)))))))
 
 (defn find-matching-inst
-  [rator type rand-arg-types rand-actual-types]
+  [rator type rand-arg-types rand-actual-types gamma-dt gamma-tc type-tc-map]
   (let [matching (filter (fn [[arg-type rand]] (if (seq? arg-type) (in? arg-type type) (= type arg-type))) rand-arg-types)
         matching-types (map first matching)
         matching-args (map second matching)
         actual-type (unique (map second (filter (fn [[rand type]] (in? matching-args rand)) rand-actual-types)))
         matching-actual (unique (map second (filter (fn [[rand arg-type]] (if (seq? arg-type) (in? arg-type type) (= type arg-type))) rand-actual-types)))]
-    (println "")
-    (println (pr-str "rand-arg-types " rand-arg-types " rand-actual-types " rand-actual-types))
-    (println (pr-str "matching " matching " actual-type " actual-type))
-    (println (pr-str "type " type " actual-type " actual-type))
-    (println (pr-str "matching-types " matching-types))
+    ; (println "")
+    ; (println (pr-str "rand-arg-types " rand-arg-types " rand-actual-types " rand-actual-types))
+    ; (println (pr-str "matching " matching " actual-type " actual-type))
+    ; (println (pr-str "type " type " actual-type " actual-type))
+    ; (println (pr-str "matching-types " matching-types))
     (cond
+      (defined-type? type gamma-dt gamma-tc type-tc-map) (gen-overloaded-func-name rator type)
       ; (> (count matching-actual) 0) (gen-overloaded-func-name rator type)
       (= (count actual-type) 1) (if (seq? (first actual-type))
                                   (if (seq? (first matching-types))
@@ -368,13 +376,13 @@
         (lambda? exp)   (let [args    (arg1 exp)
                               e       (arg2 exp)
                               e-type  (if (vector? decl-type) (last decl-type) decl-type)
-                              e-type  (try-lookup-environment-type e e-type gamma-dec gamma-dt gamma-tc gamma-prim tc-insts)
+                              e-type  (if (nil? (try-lookup-environment-type e e-type gamma-dec gamma-dt gamma-tc gamma-prim tc-insts)) e-type (try-lookup-environment-type e e-type gamma-dec gamma-dt gamma-tc gamma-prim tc-insts))
                               e'      (transform-exp e e-type gamma-dec gamma-dt gamma-tc gamma-prim tc-insts type-tc-map code-defs sub-fs)
                               ov-args (unique (concat (collect-overloaded-args e' code-defs) (collect-overloaded-args e code-defs)))]
-                          ; (println (pr-str "transformed " e'))
+                          ; (println (pr-str "transformed lambda " e' " ov-args " ov-args))
                           (if (empty? ov-args)
                             exp
-                            (make-lambda (vec ov-args) (make-lambda args (arg2 e')))))
+                            (make-lambda (vec ov-args) (make-lambda args (if (lambda? e') (arg2 e') e')))))
         (let? exp)      (let [x  (arg1 exp)
                               e  (arg2 exp)
                               e' (arg3 exp)
@@ -427,6 +435,7 @@
         (inst-predicate? exp) exp
         :else (let [rator (first exp)
                     rands (rest exp)]
+                ; (println (pr-str "transform call " exp " type " decl-type))
                 (cond (in? (environment-keys gamma-prim) rator)
                       (let [prim-types (lookup-environment rator gamma-prim)
                             [tr-rands ov-args] (transform-rands rands (take (- (count prim-types) 1) prim-types) gamma-dec gamma-dt gamma-tc gamma-prim tc-insts type-tc-map code-defs sub-fs)]
@@ -446,11 +455,29 @@
                                                                     [tr-rands ov-args] (transform-rands rands (take (- (count arg-types) 1) arg-types) gamma-dec gamma-dt gamma-tc gamma-prim tc-insts type-tc-map code-defs sub-fs)
                                                                     ov-args (vec (unique (cons new-rator ov-args)))
                                                                     tr (make-lambda ov-args (concat (list new-rator) tr-rands))
-                                                                    rand-ts (map (fn [r] (try (lookup-environment-type r gamma-dec gamma-dt gamma-tc gamma-prim tc-insts) (catch Exception _ nil))) tr-rands)]
-                                                                ; (println (pr-str "ov-args " ov-args))
+                                                                    rand-ts (map (fn [r] (try-lookup-environment-type r decl-type gamma-dec gamma-dt gamma-tc gamma-prim tc-insts)) tr-rands)]
+                                                                (println (pr-str "rand-ts " rand-ts))
                                                                 
-                                                                (if (every? (fn [r] (and (not (nil? r)) (not (vector? r)) (= (count (unique rand-ts)) 1))) rand-ts)
-                                                                  (transform-exp (concat (list (gen-overloaded-func-name rator (first rand-ts))) rands) decl-type gamma-dec gamma-dt gamma-tc gamma-prim tc-insts type-tc-map code-defs sub-fs)
+                                                                (if 
+                                                                 ; (every? (fn [r] (and (not (nil? r)) (not (vector? r)) (= (count (unique rand-ts)) 1))) rand-ts)
+                                                                 (every? (fn [r] (and (not (nil? r)) (not (vector? r)))) rand-ts)
+                                                                  ; (transform-exp (concat (list (gen-overloaded-func-name rator (if (seq? (first rand-ts)) (first (first rand-ts)) (first rand-ts)))) rands) decl-type gamma-dec gamma-dt gamma-tc gamma-prim tc-insts type-tc-map code-defs sub-fs)
+                                                                  (loop [insts (lookup-environment* rator tc-insts)]
+                                                                    (if (empty? insts)
+                                                                      (throw (Exception. (pr-str "No matching instance for " rator)))
+                                                                      (let [res (loop [dec-ts    (take (count rand-ts) (replace-typeclass-type (lookup-environment rator gamma-tc) (arg2 (first insts))))
+                                                                                       actual-ts rand-ts]
+                                                                                  (println (pr-str "dec-ts " dec-ts " actual-ts " actual-ts))
+                                                                                  (if (empty? dec-ts)
+                                                                                    (arg2 (first insts))
+                                                                                   (if (seq? (first actual-ts))
+                                                                                    (if (= (first dec-ts) (first (first actual-ts)))
+                                                                                      (recur (rest dec-ts) (rest actual-ts))
+                                                                                      false)
+                                                                                    (if (= (first dec-ts) (first actual-ts))
+                                                                                      (recur (rest dec-ts) (rest actual-ts))
+                                                                                      false))))]
+                                                                        (if res (transform-exp (concat (list (gen-overloaded-func-name rator res)) rands) decl-type gamma-dec gamma-dt gamma-tc gamma-prim tc-insts type-tc-map code-defs sub-fs) (recur (rest insts))))))
                                                                  tr)
                                                                 ; tr
                                                                 )
@@ -484,7 +511,8 @@
                                                             (find-matching-inst
                                                              (first (first overloaded-args))
                                                              (second (first overloaded-args))
-                                                             rand-arg-types rand-actual-types) matched-operands)))))))
+                                                             rand-arg-types rand-actual-types
+                                                             gamma-dt gamma-tc type-tc-map) matched-operands)))))))
                                           (let [[tr-rands ov-args] (transform-rands rands (take (- (count e-type) 1) e-type) gamma-dec gamma-dt gamma-tc gamma-prim tc-insts type-tc-map code-defs sub-fs)]
                                             (if (empty? ov-args)
                                               ; exp
@@ -514,10 +542,14 @@
                                 (if (= exp transformed)
                                   exp
                                   (let [arg-types (lookup-environment-type rator gamma-dec gamma-dt gamma-tc gamma-prim tc-insts)
-                                        [tr-rands ov-args] (transform-rands rands arg-types gamma-dec gamma-dt gamma-tc gamma-prim tc-insts type-tc-map code-defs sub-fs)]
+                                        [tr-rands ov-args] (transform-rands rands arg-types gamma-dec gamma-dt gamma-tc gamma-prim tc-insts type-tc-map code-defs sub-fs)
+                                        rator-ov-args (collect-overloaded-args rator code-defs)]
+                                    ; (println (pr-str "rator-ov-args " rator-ov-args " ov-args " ov-args " rator " rator))
                                     (if (empty? ov-args)
                                       ; exp
-                                      (concat (list rator) tr-rands)
+                                      (if (empty? rator-ov-args)
+                                        (concat (list rator) tr-rands)
+                                        (make-lambda (vec rator-ov-args) (concat (list (concat (list rator) rator-ov-args)) tr-rands)))
                                       (make-lambda ov-args (concat (list rator) tr-rands))))))
                               ; (if (or (not (every? overloaded-arg? (rest transformed))) (= exp transformed))
                               ;   exp
@@ -631,11 +663,6 @@
     ; (println (pr-str "Transformed " transformed))
     transformed))
 
-(defn replace-typeclass-type
-  [tc-fn t]
-  (let [a (nth tc-fn 2)]
-    (vec (find-replace a t (nth tc-fn 3)))))
-
 (defn check-inst [gamma-dt gamma-tc gamma-prim gamma-dec tc-insts inst-name insts type-tc-map code-defs sub-fs]
   (let [tc-fn (lookup-environment inst-name gamma-tc)]
     (loop [insts insts
@@ -695,7 +722,7 @@
         (if (empty? forms)
           transformed-code'
           (let [form (first forms)]
-            (println (str "transform " form))
+            ; (println (str "transform " form))
             (cond (or (const? form) (variable? form) (overload? form) (prog-inst? form) (data? form) (data-fn? form) (data-adt? form)) (recur (rest forms) (conj transformed-code' form) sub-fs-keys code-defs' gamma-dec')
               (or (type-decl? form) (typeclass? form)) (recur (rest forms) transformed-code' sub-fs-keys code-defs' gamma-dec')
                   (typeclass-inst? form) (let [tr-insts (map (fn [inst] (check-inst2 gamma-dt gamma-tc gamma-prim gamma-dec' tc-insts (first inst) inst type-tc-map code-defs' sub-fs (arg2 form))) (drop 3 form))]

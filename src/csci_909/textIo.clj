@@ -31,7 +31,7 @@
     ;               (catch Exception e (println (str "Type check failed: " e))))
     type-check (try
                  (check-and-transform-code all-decl forms)
-                 ; (catch Exception e (println (str "Type check failed: " e)))
+                 (catch Exception e (println (str "Type check failed: " e)))
                  )
     ]
     ; (println (pr-str type-check))

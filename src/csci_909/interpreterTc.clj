@@ -38,7 +38,7 @@
 
 (defn meaning
   [term env]
-  ;; (println "") (println (pr-str "meanig " term " | env "  (environment-keys env)))
+  ;; (println "") (println (pr-str "meanig " term " | env "  (count (environment-keys env))))
   (cond
     (const? term)        term
     (data-inst? term)    term
@@ -186,6 +186,7 @@
                              (inst-accessor? mf) (let [t (nth mf 1)
                                                        a (nth mf 2)
                                                        vs (map (fn [e'] (meaning e' env)) e's)]
+                                                   (println (pr-str "extract " e's " vs " vs " t " t))
                                                    (if (= 1 (count vs))
                                                      (if (= (get-inst-type (first vs)) t)
                                                         (get (nth (first vs) 2) a)
@@ -193,6 +194,7 @@
                                                      (throw (Exception. "Record accessor applied to too many arguments."))))
                              (inst-predicate? mf) (let [t (nth mf 1)
                                                         vs (map (fn [e'] (meaning e' env)) e's)]
+                                                    (println (pr-str "check " e's " vs " vs " t " t " res " (= (get-inst-type (first vs)) t)))
                                                     (if (= 1 (count vs))
                                                       (= (get-inst-type (first vs)) t)
                                                       (throw (Exception. "Record accessor applied to too many arguments."))))

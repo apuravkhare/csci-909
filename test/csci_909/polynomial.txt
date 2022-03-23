@@ -4,14 +4,16 @@
 
 (type scale [double MPoly MPoly])
 (define scale (lambda [a p]
- (cond (Const? p)    (Const (* a (Const-c p)))
+ (cond (== 0.0 a)    (Const 0.0)
+       (Const? p)    (Const (* a (Const-c p)))
        (ProdPlus? p) (ProdPlus (scale a (ProdPlus-p1 p)) (ProdPlus-x p) (scale a (ProdPlus-p2 p))))))
 
 (scale 2.0 (ProdPlus (Const 1.0) "x" (Const 2.0)))
+(scale 0.0 (ProdPlus (Const 1.0) "x" (Const 2.0)))
 
 (type normalPoly [MPoly string MPoly MPoly])
 (define normalPoly (lambda [p1 x p2]
- (if (Const? p1)
+ (if (*prim-and (Const? p1) (== 0.0 (Const-c p1)))
      p2
      (ProdPlus p1 x p2))))
 
@@ -25,12 +27,30 @@
 (addPolynomials (Const 1.0) (Const 2.0))
 (addPolynomials (Const 1.0) (ProdPlus (Const 1.0) "x" (Const 2.0)))
 
+(type mul-var [string MPoly MPoly])
+(define mul-var (lambda [x p]
+ (cond 
+       ; (*prim-and (Const? p) (== 0.0 (Const-c p))) (Const 0.0)
+       (Const? p)    (ProdPlus p x (Const 0.0))
+       (ProdPlus? p) (ProdPlus (mul-var x (ProdPlus-p1 p)) (ProdPlus-x p) (mul-var x (ProdPlus-p2 p))))))
+
+(type mulPolynomials [MPoly MPoly MPoly])
+(define mulPolynomials (lambda [p1 p2]
+ (cond (Const? p1)    (scale (Const-c p1) p2)
+       (ProdPlus? p1) (addPolynomials (mulPolynomials (ProdPlus-p1 p1) (mul-var (ProdPlus-x p1) p2)) (mulPolynomials (ProdPlus-p2 p1) p2))
+       )))
+
 (typeclass-inst Num MPoly
  (+ [p1 p2] (addPolynomials p1 p2))
- (- [p1 p2] p1)
- (* [p1 p2] p1)
+ (- [p1 p2] (addPolynomials p1 (scale -1.0 p2)))
+ (* [p1 p2] (mulPolynomials p1 p2))
  (neg [p] (scale -1.0 p)))
 
 (+ (Const 1.0) (Const 2.0))
 (+ (Const 1.0) (ProdPlus (Const 1.0) "x" (Const 2.0)))
+(+ (Const 0.0) (ProdPlus (Const 1.0) "x" (Const 2.0)))
 (+ (ProdPlus (Const 1.0) "x" (Const 2.0)) (ProdPlus (Const 1.0) "x" (Const 2.0)))
+
+(* (Const 2.0) (Const 2.0))
+(* (Const 2.0) (ProdPlus (Const 1.0) "x" (Const 2.0)))
+(* (ProdPlus (Const 1.0) "x" (Const 2.0)) (ProdPlus (Const 1.0) "x" (Const 2.0)))
