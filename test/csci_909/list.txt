@@ -11,11 +11,18 @@
                              (Cons? l) (+ 1 (length (Cons-c l)))
                              (Empty? l) 0)))
 
-(type sum [(List a) a] [(Num a)])
-(define sum (lambda [l] (cond
-                          (Cons? l) (+ (Cons-i l) (sum (Cons-c l)))
-                          (Empty? l) 0)))
+(type sum [a (List a) a] [(Num a)])
+(define sum (lambda [z l] (cond
+                          (Cons? l) (+ (Cons-i l) (sum z (Cons-c l)))
+                          (Empty? l) z)))
+
+(type map [(List a) [a b] (List b) (List b)])
+(define map (lambda [l f acc] (cond
+                               (Cons? l) (map (Cons-c l) f (Cons (f (Cons-i l)) acc))
+                               (Empty? l) acc)))
 
 (length (Cons 1 (Cons 2 (Empty))))
-(sum (Cons 1 (Cons 2 (Empty))))
-(sum (Cons 1.0 (Cons 2.0 (Empty))))
+(sum 0 (Cons 1 (Cons 2 (Empty))))
+(sum 0.0 (Cons 1.0 (Cons 2.0 (Empty))))
+
+(map (Cons 1 (Cons 2 (Empty))) (lambda [x] (* x 2)) (Empty))

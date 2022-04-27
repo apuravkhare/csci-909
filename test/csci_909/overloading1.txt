@@ -1,9 +1,0 @@
-(overload inc)
-
-(inst inc [integer] (lambda [x] (+ 1 x)))
-
-(inst inc [double] (lambda [x] (+ 1.5 x)))
-
-(inc 1.5)
-
-(inc 1)

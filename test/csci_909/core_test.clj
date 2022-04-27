@@ -3,12 +3,11 @@
             [csci-909.core :refer :all]))
 
 (def files-to-test
-  ["./test/csci_909/forms.txt"
-   "./test/csci_909/data.txt"
-   "./test/csci_909/functions.txt"
-   "./test/csci_909/overloading1.txt"
-   "./test/csci_909/overloading2.txt"
-   "./test/csci_909/overloading3.txt"])
+  ["./test/csci_909/pair.txt"
+   "./test/csci_909/maybe.txt"
+   "./test/csci_909/list.txt"
+   "./test/csci_909/polynomial.txt"
+   "./test/csci_909/typeclasses.txt"])
 
 (deftest a-test
   (testing "Testing file exec"

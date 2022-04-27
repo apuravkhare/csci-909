@@ -11,6 +11,7 @@
 (require '[clojure.java.io :as io])
 
 (defn read-forms
+  "Converts string forms defined in the text files to S-expressions."
   [file]
   (let [rdr (-> file io/file io/reader PushbackReader.)
         sentinel (Object.)]
@@ -21,20 +22,15 @@
           (recur (conj forms form)))))))
 
 (defn process-file
+  "Executes the code given in the file specified by filepath. Runs the code through the typechecker before execution."
   [filepath]
   (let
    [forms    (concat typeclassEnv (read-forms filepath))
     env      (init-env)
     all-decl (split-decl forms)
-    ; type-check (try
-    ;               (check-program-5tuple all-decl)
-    ;               (catch Exception e (println (str "Type check failed: " e))))
     type-check (try
                  (check-and-transform-code all-decl forms)
-                 (catch Exception e (println (str "Type check failed: " e)))
-                 )
-    ]
-    ; (println (pr-str type-check))
+                 (catch Exception e (println (str "Type check failed: " e))))]
     (reduce (fn [acc f]
               (conj acc (try
                           (println (str "> " (pr-str f)))
@@ -42,14 +38,12 @@
                            (if (func? m)
                              (println 'closure)
                              (println m)))
-                          ; (catch Exception e (println (str "Error: " e)))
-                          )))
+                          (catch Exception e (println (str "Error: " e))))))
                '()
-               ; @prog
-            type-check)
-    ))
+            type-check)))
 
 (defn run-repl
+  "Runs the application in interactive mode, directly executing the functions on the interpreter."
   []
   (println "Enter an expression. Type 'quit' to exit")
   (loop [env (init-env)]
