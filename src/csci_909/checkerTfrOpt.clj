@@ -386,15 +386,32 @@
       (symbol (str "*" (apply str f-name) "*"))
       (recur (rest args) (concat f-name (str (first args)))))))
 
+(declare get-or-create-fn-instance)
+
+(defn gen-sub-fn-rec-2
+  [f-name f-body sub-name args-names arg-map sub-fs code-defs]
+  (cond (const? f-body) f-body
+        (variable? f-body) f-body
+        (and (seq? f-body) (in? args-names (first f-body))) (doall (concat (list (arg-map (first f-body))) (gen-sub-fn-rec-2 f-name (rest f-body) sub-name args-names arg-map sub-fs code-defs)))
+        (and (seq? f-body) (= (first f-body) f-name)) sub-name
+        (and (seq? f-body) (every? overloaded-arg? (rest f-body))) (get-or-create-fn-instance (first f-body) (map (fn [a] (get arg-map a)) (rest f-body)) sub-fs code-defs)
+        (seq? f-body) (doall (map (fn [exp] (gen-sub-fn-rec-2 f-name exp sub-name args-names arg-map sub-fs code-defs)) f-body))
+        :else f-body))
+
+(defn gen-sub-fn-rec
+  [f-name f-def sub-name args sub-fs code-defs]
+  (gen-sub-fn-rec-2 f-name (arg2 f-def) sub-name (arg1 f-def) (zipmap (arg1 f-def) args) sub-fs code-defs))
+
 (defn get-or-create-fn-instance
   "For the given function and arguments, creates a new function name and definition, or returns one if it already exists."
-  [f args sub-fs]
+  [f args sub-fs code-defs]
   (let [f-name (gen-fn-sub-name f args)]
     ; (println (str "grn-fn " f-name))
     (if (in? (environment-keys sub-fs) f-name)
       f-name
       (do
-        (define-variable! f-name (make-define f-name (concat (list f) args)) sub-fs)
+        ; (define-variable! f-name (make-define f-name (concat (list f) args)) sub-fs)
+        (define-variable! f-name (make-define f-name (gen-sub-fn-rec f (lookup-environment f code-defs) f-name args sub-fs code-defs)) sub-fs)
         f-name))))
 
 (defn transform-exp
@@ -574,7 +591,7 @@
                               (if (every? overloaded-arg? (rest transformed))
                                 ; optimization: replace below with function name called with the passed rands
                                 ; (concat (list (concat (list rator) (rest transformed))) rands)
-                                (concat (list (get-or-create-fn-instance rator (rest transformed) sub-fs)) rands)
+                                (concat (list (get-or-create-fn-instance rator (rest transformed) sub-fs code-defs)) rands)
                                 (if (= exp transformed)
                                   exp
                                   (let [arg-types (lookup-environment-type rator gamma-dec gamma-dt gamma-tc gamma-prim tc-insts)
@@ -607,7 +624,6 @@
     (if (empty? args)
       exp
       (transform-rec-call exp id args))))
-
 (defn check-type
   "Recursively checks the type of an expression against the declared type."
   [exp decl-type gamma-dec gamma-dt gamma-tc gamma-prim tc-insts type-tc-map constraints]
